@@ -2,47 +2,42 @@
 
 
 
-# [Project Name] 🎯
+# THE UNNCESSARY FM
 
 
 ## Basic Details
-### Team Name: [Name]
+### Team Name: MiNa
 
 
 ### Team Members
-- Team Lead: [Name] - [College]
-- Member 2: [Name] - [College]
-- Member 3: [Name] - [College]
+- Team Lead: MIDHUN K M - NSS COLLEGE OF ENGINEERING, PALAKKAD
+- Member 2: NAYANA P - NSS COLLEGE OF ENGINEERING, PALAKKAD
 
 ### Project Description
-[2-3 lines about what your project does]
+THE UNNCESSARY FM turns random noise into music.. you record or upload, ta daa... your one minute music is ready!!!
 
 ### The Problem (that doesn't exist)
-[What ridiculous problem are you solving?]
+The world is full of perfectly ordinary noises, but for some reason, they aren't songs. We decided this was unacceptable.
 
 ### The Solution (that nobody asked for)
-[How are you solving it? Keep it fun!]
+So we decided to do something about it.
+
+Unnecessary FM turns ordinary noises into songs. Because apparently, being a noise wasn't enough.
 
 ## Technical Details
 ### Technologies/Components Used
 For Software:
-- [Languages used]
-- [Frameworks used]
-- [Libraries used]
-- [Tools used]
-
-For Hardware:
-- [List main components]
-- [List specifications]
-- [List tools required]
+- Python, Javascript
+- FastAPI
+- NumPy, SciPy, Soundfile, librosa, ffmpeg
 
 ### Implementation
 For Software:
 # Installation
-[commands]
+```pip install -r requirements.txt```
 
 # Run
-[commands]
+py -m uvicorn app.main:app --port 8080
 
 ### Project Documentation
 For Software:
@@ -60,25 +55,6 @@ For Software:
 # Diagrams
 ![Workflow](Add your workflow/architecture diagram here)
 *Add caption explaining your workflow*
-
-For Hardware:
-
-# Schematic & Circuit
-![Circuit](Add your circuit diagram here)
-*Add caption explaining connections*
-
-![Schematic](Add your schematic diagram here)
-*Add caption explaining the schematic*
-
-# Build Photos
-![Components](Add photo of your components here)
-*List out all components shown*
-
-![Build](Add photos of build process here)
-*Explain the build steps*
-
-![Final](Add photo of final product here)
-*Explain the final build*
 
 ### Project Demo
 # Video
