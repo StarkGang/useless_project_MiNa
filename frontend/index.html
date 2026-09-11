@@ -112,12 +112,15 @@
           <h3>[02] COMPOSITION DIRECTIVES</h3>
           <div class="param-grid">
             <div class="param-group">
-              <label for="beatSelect">Rhythmic Beat</label>
+              <label for="beatSelect">Genre &amp; Beat Mode</label>
               <select id="beatSelect" class="form-select">
-                <option value="minimal" selected>Minimal (Default 40-60%)</option>
-                <option value="none">No Drums (Atmospheric)</option>
-                <option value="light_percussion">Light Percussion</option>
-                <option value="rhythmic">Rhythmic Pulse</option>
+                <option value="hiphop" selected>&#x1F3A7; Hip Hop (Boom-Bap, Lo-Fi &amp; Swung Chops)</option>
+                <option value="rap">&#x1F525; Rap / Trap (808 Sub-Bass, Rolling Hats &amp; Claps)</option>
+                <option value="pop">&#x2728; Pop (Punchy 4-on-the-Floor, Hooks &amp; Disco Pulse)</option>
+                <option value="minimal">&#x1F9E9; Minimal (Atmospheric 40-60% Groove)</option>
+                <option value="rhythmic">&#x1F941; Rhythmic Pulse (Driving Upbeat)</option>
+                <option value="light_percussion">&#x1F3B6; Light Percussion (Organic Foley)</option>
+                <option value="none">&#x1F30C; No Drums (Ambient Drone)</option>
               </select>
             </div>
 
@@ -191,6 +194,10 @@
 
           <!-- Winner / Active Candidate Info Banner -->
           <div class="composition-meta-banner">
+            <div class="meta-item">
+              <span class="meta-label">GENRE MODE</span>
+              <span class="meta-val highlight" id="metaGenre">Hip Hop</span>
+            </div>
             <div class="meta-item">
               <span class="meta-label">TEMPO</span>
               <span class="meta-val" id="metaTempo">94 BPM</span>

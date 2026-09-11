@@ -125,7 +125,8 @@ def sequence_melody(
     source_peaks: Optional[List[float]] = None,
     has_pitch: bool = False,
     density_factor: float = 0.6,
-    rng: Optional[SeededRNG] = None
+    rng: Optional[SeededRNG] = None,
+    genre_preference: Optional[str] = None
 ) -> List[NoteEvent]:
     """
     Sequence a repeating, evolving melody across all bars of the composition.
@@ -133,13 +134,32 @@ def sequence_melody(
       - 2-bar motif repeated with variation
       - Silence/breathing spaces on certain bars
       - Climax octave jumps
+      - Genre-specific phrasing (staccato trap bells, soulful hip hop riffs, catchy pop earworms)
     """
     if rng is None:
         rng = SeededRNG()
 
     import numpy as np
 
-    motif = generate_motif(scale, motif_length=4, source_spectral_peaks=source_peaks, has_pitch_confidence=has_pitch, rng=rng)
+    pref = (genre_preference or "").lower()
+
+    # Determine motif length and register based on genre
+    motif_len = 4
+    if pref in ["rap", "trap", "drill"]:
+        motif_len = 5  # Hypnotic 5-note trap motif
+    elif pref in ["pop"]:
+        motif_len = 4  # Punchy 4-note earworm
+
+    motif = generate_motif(scale, motif_length=motif_len, source_spectral_peaks=source_peaks, has_pitch_confidence=has_pitch, rng=rng)
+
+    # Octave register adaptation
+    if pref in ["pop"]:
+        # Pop leads cut through best in the upper register (octave 5)
+        motif = [min(84, m + 12) if m < 68 else m for m in motif]
+    elif pref in ["rap", "trap"]:
+        # Trap bells / dark plucks in mid-high register
+        motif = [min(81, m + 12) if m < 64 else m for m in motif]
+
     events: List[NoteEvent] = []
 
     # Step duration (8th note)
@@ -147,7 +167,7 @@ def sequence_melody(
 
     bar_idx = 0
     while bar_idx < total_bars:
-        # Every 4 bars, pick a motif transformation
+        # Pick motif transformation
         if bar_idx % 4 == 0:
             current_motif = motif
         elif bar_idx % 4 == 1:
@@ -157,21 +177,40 @@ def sequence_melody(
         else:
             current_motif = transform_motif(motif, scale, transform_type="retrograde")
 
-        # Leave occasional rest bar (breathing space)
+        # Leave breathing space on certain bars
         if rng.chance(1.0 - density_factor) and bar_idx % 4 == 3:
             bar_idx += 1
             continue
 
         bar_start_time = bar_idx * seconds_per_bar
 
-        # Place notes on syncopated 8th note grid
-        step_positions = [0, 2, 3, 5] if len(current_motif) == 4 else [0, 2, 4, 6]
+        # Genre-specific rhythmic placement & note lengths
+        if pref in ["rap", "trap", "drill"]:
+            # Staccato, syncopated trap bell / pluck rhythm
+            step_positions = [0, 1, 3, 4, 6] if len(current_motif) >= 5 else [0, 2, 3, 5]
+            dur_choices = [0.65, 0.85, 1.1]  # Tight staccato
+            base_vel = 0.88
+        elif pref in ["pop"]:
+            # Driving, rhythmic pop hook
+            step_positions = [0, 2, 3, 5] if len(current_motif) == 4 else [0, 1, 4, 6]
+            dur_choices = [1.2, 1.6, 2.0]
+            base_vel = 0.92
+        elif pref in ["hiphop", "hip_hop", "lofi"]:
+            # Swung, laid-back soulful phrasing
+            step_positions = [1, 3, 4, 6] if rng.chance(0.5) else [0, 2, 4, 5]
+            dur_choices = [1.5, 2.2, 2.8]
+            base_vel = 0.82
+        else:
+            step_positions = [0, 2, 3, 5] if len(current_motif) == 4 else [0, 2, 4, 6]
+            dur_choices = [1.2, 1.8, 2.5]
+            base_vel = 0.85
+
         for i, m_note in enumerate(current_motif):
             if i < len(step_positions):
                 s_pos = step_positions[i]
                 start_t = bar_start_time + s_pos * step_sec
-                dur = step_sec * rng.choice([1.2, 1.8, 2.5])
-                vel = float(rng.uniform(0.65, 0.88))
+                dur = step_sec * rng.choice(dur_choices)
+                vel = float(np.clip(base_vel + rng.uniform(-0.08, 0.08), 0.5, 0.98))
 
                 events.append(NoteEvent(
                     midi=m_note,

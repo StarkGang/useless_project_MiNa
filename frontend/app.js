@@ -34,6 +34,7 @@
 
   // Candidate tabs & banners
   const candidateTabs = document.getElementById('candidateTabs');
+  const metaGenre = document.getElementById('metaGenre');
   const metaTempo = document.getElementById('metaTempo');
   const metaScale = document.getElementById('metaScale');
   const metaDuration = document.getElementById('metaDuration');
@@ -501,6 +502,19 @@
     const cand = currentResultData.candidates[index];
 
     // Update Banner
+    if (metaGenre) {
+      const pref = (currentResultData.settings && currentResultData.settings.beat_preference) || beatSelect.value || 'hiphop';
+      const genreLabels = {
+        'hiphop': 'Hip Hop',
+        'rap': 'Rap / Trap',
+        'pop': 'Pop',
+        'minimal': 'Minimal',
+        'rhythmic': 'Rhythmic Pulse',
+        'light_percussion': 'Light Percussion',
+        'none': 'Ambient'
+      };
+      metaGenre.textContent = genreLabels[pref.toLowerCase()] || pref.toUpperCase();
+    }
     metaTempo.textContent = `${cand.tempo_bpm} BPM`;
     metaScale.textContent = cand.scale_name;
     metaDuration.textContent = `${cand.duration.toFixed(1)}s`;

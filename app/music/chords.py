@@ -33,6 +33,31 @@ PROGRESSIONS_MINOR = [
 ]
 
 
+# Genre-specific progression degree patterns
+PROGRESSIONS_POP = [
+    [1, 5, 6, 4],       # I - V - vi - IV (Iconic 4-chord pop loop)
+    [6, 4, 1, 5],       # vi - IV - I - V (Emotive modern radio pop)
+    [1, 4, 6, 5],       # I - IV - vi - V (Driving synth-pop)
+    [1, 6, 4, 5],       # I - vi - IV - V (Classic pop hook)
+]
+
+PROGRESSIONS_HIPHOP = [
+    [1, 6, 3, 7],       # i - VI - III - VII (Classic 90s/lofi hip hop)
+    [2, 5, 1],          # ii - V - I (Soulful jazz turnaround)
+    [1, 4, 7],          # i - iv - VII (Head-nodding groove)
+    [1, 7],             # i - VII (2-chord soul loop)
+    [1, 4, 5],          # i - iv - v
+]
+
+PROGRESSIONS_RAP = [
+    [1, 6],             # i - VI (Dark menacing 2-chord trap loop)
+    [1, 7, 6],          # i - VII - VI (Heavy minor descent)
+    [1, 2],             # i - II (Phrygian trap tension)
+    [1, 6, 7],          # i - VI - VII (Drill/trap hook)
+    [1, 7],             # i - VII (Ominous trap loop)
+]
+
+
 @dataclass
 class Chord:
     root_midi: int              # Bass root note (e.g. 48 for C3)
@@ -77,15 +102,23 @@ def generate_chord_voicing(scale: MusicalScale, degree: int, base_octave: int = 
 
 def select_chord_progression(
     scale: MusicalScale,
-    rng: Optional[SeededRNG] = None
+    rng: Optional[SeededRNG] = None,
+    genre_preference: Optional[str] = None
 ) -> List[Chord]:
-    """Select and voice a procedural chord progression matched to the scale."""
+    """Select and voice a procedural chord progression matched to the scale and genre."""
     if rng is None:
         rng = SeededRNG()
 
+    pref = (genre_preference or "").lower()
     is_minor = "minor" in scale.scale_type or scale.scale_type in ["dorian", "phrygian", "blues"]
 
-    if is_minor:
+    if pref in ["pop", "dance", "synthpop"]:
+        degrees = rng.choice(PROGRESSIONS_POP)
+    elif pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
+        degrees = rng.choice(PROGRESSIONS_HIPHOP)
+    elif pref in ["rap", "trap", "drill"]:
+        degrees = rng.choice(PROGRESSIONS_RAP)
+    elif is_minor:
         degrees = rng.choice(PROGRESSIONS_MINOR)
     else:
         degrees = rng.choice(PROGRESSIONS_MAJOR)

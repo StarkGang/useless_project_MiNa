@@ -116,24 +116,32 @@ def render_candidate_composition(
             target_slice_count=48
         )
 
-    # 2. Select Musical Scale & Root Tonality
+    # 2. Select Musical Scale & Root Tonality (Genre-adapted)
     scale = select_scale(
         brightness=analysis.spectral.brightness,
         noisiness=analysis.texture.noisiness,
         candidate_root_notes=analysis.pitch.candidate_notes,
-        rng=rng
+        rng=rng,
+        genre_preference=beat_preference
     )
 
-    # 3. Select Musical Tempo (BPM)
-    if analysis.rhythm.has_reliable_rhythm:
+    # 3. Select Musical Tempo (BPM tailored to Genre archetype)
+    pref = (beat_preference or "minimal").lower()
+    if pref in ["hiphop", "hip_hop", "boom_bap", "boombap", "lofi"]:
+        bpm = rng.uniform(86.0, 96.0)     # Classic Hip Hop pocket
+    elif pref in ["rap", "trap", "drill"]:
+        bpm = rng.uniform(134.0, 146.0)   # Modern Trap half-time pocket
+    elif pref in ["pop", "dance", "synthpop"]:
+        bpm = rng.uniform(118.0, 128.0)   # Driving Pop radio pulse
+    elif analysis.rhythm.has_reliable_rhythm:
         bpm = analysis.rhythm.estimated_tempo + rng.uniform(-2.0, 2.0)
     else:
         bpm = rng.uniform(84.0, 114.0)
 
     if energy_preference == "low":
-        bpm = max(74.0, bpm * 0.90)
+        bpm = max(70.0, bpm * 0.90)
     elif energy_preference == "high":
-        bpm = min(128.0, bpm * 1.10)
+        bpm = min(150.0, bpm * 1.08)
     bpm = round(bpm, 1)
 
     # 4. Plan Adaptive Song Arrangement strictly bounded to ~60s
@@ -146,8 +154,8 @@ def render_candidate_composition(
     total_duration = arrangement.total_duration
     total_samples = int(total_duration * sr)
 
-    # 5. Generate Chord Progression & Melodic Hook
-    chords = select_chord_progression(scale, rng=rng)
+    # 5. Generate Chord Progression & Melodic Hook (Genre-adapted)
+    chords = select_chord_progression(scale, rng=rng, genre_preference=beat_preference)
     melody_events = sequence_melody(
         scale=scale,
         total_bars=arrangement.total_bars,
@@ -155,7 +163,8 @@ def render_candidate_composition(
         source_peaks=analysis.spectral.dominant_frequencies,
         has_pitch=analysis.pitch.has_reliable_pitch,
         density_factor=0.65 if energy_preference == "high" else 0.50,
-        rng=rng
+        rng=rng,
+        genre_preference=beat_preference
     )
 
     # 6. Generate Punchy Drum & Percussion Rhythm
@@ -351,8 +360,15 @@ def render_candidate_composition(
     track_melody = ping_pong_delay(track_melody, bpm=bpm, division=0.5, feedback=0.25, mix=0.22, sr=sr)
     track_melody = schroeder_reverb(track_melody, room_size=0.75, wet_level=0.22, sr=sr)
     track_chords = schroeder_reverb(track_chords, room_size=0.85, wet_level=0.28, sr=sr)
-    track_accents = schroeder_reverb(track_accents, room_size=0.70, wet_level=0.25, sr=sr)
-    track_bass = soft_saturation(track_bass, drive=1.15)
+    # Bass drive tailored to genre
+    bass_drive = 1.15
+    if pref in ["rap", "trap", "drill"]:
+        bass_drive = 1.42   # Saturated 808 sub-bass wall
+    elif pref in ["hiphop", "hip_hop", "lofi"]:
+        bass_drive = 1.25   # Warm thick boom-bap bass
+    elif pref in ["pop"]:
+        bass_drive = 1.10   # Clean punchy dance bass
+    track_bass = soft_saturation(track_bass, drive=bass_drive)
 
     # 9. Professional Studio Mix Balancing
     mix = (
@@ -376,11 +392,29 @@ def render_candidate_composition(
         sr=sr
     )
 
+    # Contextual stem descriptions reflecting genre mode
+    if pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
+        drum_desc = "Boom-Bap Kick, Cracking Snare, Swung Hi-Hats & Vinyl Chops (Hip Hop Mode)"
+        bass_desc = "Warm Syncopated Sub-Bass (Hip Hop 808/Acoustic)"
+        lead_desc = f"Soulful Lead Hook & Chops ({lead_style.title()})"
+    elif pref in ["rap", "trap", "drill"]:
+        drum_desc = "Heavy 808 Kick, Rolling Sizzle Hats & Half-Time Claps (Rap Mode)"
+        bass_desc = "Hard Saturated 808 Sub-Bass Wall (Rap Mode)"
+        lead_desc = f"Dark Hypnotic Staccato Motif ({lead_style.title()})"
+    elif pref in ["pop", "dance", "synthpop"]:
+        drum_desc = "Punchy 4-on-the-Floor Kick, Pop Claps & Disco Open Hats (Pop Mode)"
+        bass_desc = "Bouncy Driving Melodic Bassline (Pop Mode)"
+        lead_desc = f"Catchy Earworm Melodic Hook ({lead_style.title()})"
+    else:
+        drum_desc = f"Source-Crafted Punchy Kick, Snare & Hi-Hats ({beat_preference.title()})"
+        bass_desc = "Source-Textured Warm Sub-Bass"
+        lead_desc = f"Tuned Source Melodic Hook ({lead_style.title()})"
+
     stems_info = {
-        "Drums": f"Source-Crafted Punchy Kick, Snare & Hi-Hats ({beat_preference.title()})",
-        "Bass": "Source-Textured Warm Sub-Bass",
+        "Drums": drum_desc,
+        "Bass": bass_desc,
         "Chords": f"Resonant Harmonic Progression ({scale.name})",
-        "Melody": f"Tuned Source Melodic Hook ({lead_style.title()})",
+        "Melody": lead_desc,
         "Bed": "Atmospheric Source Recording Bed",
         "Accents": "Dynamic Foley Sweeps & Accents"
     }

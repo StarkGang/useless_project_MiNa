@@ -55,37 +55,66 @@ def select_scale(
     brightness: float,
     noisiness: float,
     candidate_root_notes: Optional[List[str]] = None,
-    rng: Optional[SeededRNG] = None
+    rng: Optional[SeededRNG] = None,
+    genre_preference: Optional[str] = None
 ) -> MusicalScale:
     """
     Intelligent weighted scale selection (Sections 11 & 12).
     - Source is dark (low centroid/brightness) -> favor minor, dorian, phrygian
     - Source is bright -> favor major, pentatonic_major, mixolydian
     - Source is extremely noisy -> favor pentatonic_minor, ambient dorian, blues
+    - Genre preference:
+      * hiphop: favor dorian, minor, pentatonic_minor, blues
+      * rap: favor harmonic_minor, phrygian, minor, pentatonic_minor
+      * pop: favor major, pentatonic_major, mixolydian, minor
     """
     if rng is None:
         rng = SeededRNG()
 
     scale_types = list(SCALE_DEFINITIONS.keys())
+    pref = (genre_preference or "").lower()
 
-    # Build weights based on source features
+    # Build weights based on source features and genre directives
     weights = []
     for st in scale_types:
         w = 1.0
-        if brightness > 0.55:
-            if st in ["major", "pentatonic_major", "lydian"]:
-                w += 2.5
+
+        if pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
+            if st in ["dorian", "pentatonic_minor"]:
+                w += 4.0
+            elif st in ["minor", "blues"]:
+                w += 3.0
             elif st in ["mixolydian"]:
                 w += 1.5
-        else:
-            if st in ["minor", "dorian", "harmonic_minor"]:
-                w += 2.5
-            elif st in ["phrygian", "pentatonic_minor"]:
+        elif pref in ["rap", "trap", "drill"]:
+            if st in ["harmonic_minor", "phrygian"]:
+                w += 5.0
+            elif st in ["minor", "pentatonic_minor"]:
+                w += 3.5
+            elif st in ["blues"]:
                 w += 1.5
-
-        if noisiness > 0.4:
-            if st in ["pentatonic_minor", "dorian", "blues"]:
+        elif pref in ["pop", "dance", "synthpop"]:
+            if st in ["major", "pentatonic_major"]:
+                w += 4.5
+            elif st in ["mixolydian"]:
+                w += 3.5
+            elif st in ["minor"]:
                 w += 2.0
+        else:
+            if brightness > 0.55:
+                if st in ["major", "pentatonic_major", "lydian"]:
+                    w += 2.5
+                elif st in ["mixolydian"]:
+                    w += 1.5
+            else:
+                if st in ["minor", "dorian", "harmonic_minor"]:
+                    w += 2.5
+                elif st in ["phrygian", "pentatonic_minor"]:
+                    w += 1.5
+
+            if noisiness > 0.4:
+                if st in ["pentatonic_minor", "dorian", "blues"]:
+                    w += 2.0
 
         weights.append(w)
 
@@ -102,8 +131,15 @@ def select_scale(
             root_name = "C"
             root_idx = 0
     else:
-        # Common pleasant musical roots
-        popular_roots = ["C", "D", "E", "F", "G", "A", "A#"]
+        # Common pleasant musical roots matched to genre
+        if pref in ["rap", "trap", "drill"]:
+            popular_roots = ["C#", "D", "D#", "F", "F#", "G#", "A"]
+        elif pref in ["hiphop", "hip_hop", "lofi"]:
+            popular_roots = ["C", "D", "E", "F", "G", "A", "A#"]
+        elif pref in ["pop"]:
+            popular_roots = ["C", "D", "E", "F", "G", "A"]
+        else:
+            popular_roots = ["C", "D", "E", "F", "G", "A", "A#"]
         root_name = rng.choice(popular_roots)
         root_idx = NOTE_NAMES.index(root_name)
 
