@@ -10,47 +10,54 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;700;800;900&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <div class="glow-orb glow-orb-1"></div>
-  <div class="glow-orb glow-orb-2"></div>
+  <!-- Neo-Brutalist Marquee / Ticker Header -->
+  <div class="marquee-banner">
+    <div class="marquee-content">
+      &#x26A1; THE UNNECESSARY FM &bull; 100% PURE DSP &bull; ZERO NEURAL NETWORKS &bull; ZERO AI HALLUCINATIONS &bull; ARBITRARY NOISE IN &rarr; ~60S COMPOSITION OUT &bull; PROCEDURAL HARMONIC SYNTHESIS &bull; 100% OFFLINE &bull; TINKERHUB USELESS PROJECTS 3.0 &bull;
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
   <div class="app-container">
-    <!-- Header -->
+    <!-- Main App Navigation / Header -->
     <header class="app-header">
       <div class="brand">
         <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-            stroke-linejoin="round">
-            <path d="M2 10v3"></path>
-            <path d="M6 6v11"></path>
-            <path d="M10 3v18"></path>
-            <path d="M14 8v7"></path>
-            <path d="M18 5v13"></path>
-            <path d="M22 10v4"></path>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"
+            stroke-linejoin="miter">
+            <path d="M2 10v4"></path>
+            <path d="M6 6v12"></path>
+            <path d="M10 2v20"></path>
+            <path d="M14 7v10"></path>
+            <path d="M18 4v16"></path>
+            <path d="M22 9v6"></path>
           </svg>
         </div>
         <div class="brand-text">
           <h1>TheUnnecessaryFM</h1>
-          <span class="badge badge-dsp">100% Pure DSP &bull; Algorithmic Audio Synthesis</span>
+          <span class="badge badge-dsp">&#9632; 100% PURE DSP &bull; ALGORITHMIC AUDIO SYNTHESIS</span>
         </div>
       </div>
       <div class="header-status">
         <span class="status-indicator"></span>
-        <span class="status-label">DSP Engine Ready (Offline)</span>
+        <span class="status-label">DSP ENGINE READY (OFFLINE)</span>
       </div>
     </header>
 
-    <!-- Main Grid Layout -->
+    <!-- Main Content Grid -->
     <main class="main-content">
-      <!-- Left Column: Input & Controls -->
+      <!-- Left Column: Input & Directives -->
       <section class="card input-card">
         <div class="card-header">
-          <h2>1. Source Sound Input</h2>
+          <h2>[01] SOURCE SOUND INPUT</h2>
           <p class="subtitle">Drop any sound (traffic, rain, keyboard, voice, metallic hits, fan noise)</p>
         </div>
 
@@ -59,15 +66,15 @@
           <input type="file" id="audioFileInput" accept="audio/*,video/*" class="file-input-hidden">
           <div class="drop-zone-content" id="dropZoneContent">
             <div class="upload-icon-circle">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"
+                stroke-linejoin="miter">
+                <path d="M21 15v4H5v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
             </div>
-            <p class="drop-prompt"><strong>Drag & drop audio here</strong> or <span class="highlight">browse
-                files</span></p>
-            <span class="file-hint">Supports WAV, MP3, OGG, WebM, FLAC, M4A</span>
+            <p class="drop-prompt"><strong>DRAG &amp; DROP AUDIO HERE</strong> OR <span class="highlight">BROWSE FILES</span></p>
+            <span class="file-hint">SUPPORTS WAV, MP3, OGG, WEBM, FLAC, M4A</span>
           </div>
 
           <!-- File Info Pill (Shown when file is chosen) -->
@@ -77,11 +84,11 @@
               <span class="selected-name" id="selectedFileName">filename.wav</span>
               <span class="selected-size" id="selectedFileSize">0.0 MB</span>
             </div>
-            <button type="button" class="btn-remove" id="btnRemoveFile" title="Remove">&times;</button>
+            <button type="button" class="btn-remove" id="btnRemoveFile" title="Remove File">&times;</button>
           </div>
         </div>
 
-        <!-- Microphone Recording Bar -->
+        <!-- Microphone Recording Section -->
         <div class="mic-section">
           <div class="mic-header">
             <span class="divider-text">OR CAPTURE WITH MICROPHONE</span>
@@ -94,15 +101,15 @@
             <div class="rec-timer hidden" id="recTimer">
               <span class="rec-pulse"></span>
               <span id="recTimeDisplay">00:00</span>
-              <span class="rec-max">/ 01:00 max</span>
+              <span class="rec-max">/ 01:00 MAX</span>
             </div>
           </div>
-          <canvas id="liveMicCanvas" class="live-mic-canvas hidden" width="360" height="40"></canvas>
+          <canvas id="liveMicCanvas" class="live-mic-canvas hidden" width="360" height="44"></canvas>
         </div>
 
         <!-- Composition Parameters -->
         <div class="params-section">
-          <h3>2. Composition Directives</h3>
+          <h3>[02] COMPOSITION DIRECTIVES</h3>
           <div class="param-grid">
             <div class="param-group">
               <label for="beatSelect">Rhythmic Beat</label>
@@ -118,7 +125,7 @@
               <label for="energySelect">Dynamic Energy</label>
               <select id="energySelect" class="form-select">
                 <option value="balanced" selected>Balanced Arc</option>
-                <option value="low">Subtle & Ambient</option>
+                <option value="low">Subtle &amp; Ambient</option>
                 <option value="high">High Dynamics</option>
               </select>
             </div>
@@ -136,10 +143,10 @@
         <!-- Generate CTA Button -->
         <div class="action-section">
           <button type="button" class="btn btn-generate" id="btnGenerate" disabled>
-            <span class="btn-sparkle">&#x2728;</span>
+            <span class="btn-sparkle">&#x26A1;</span>
             <span>CREATE MUSIC (~60s)</span>
           </button>
-          <div class="generate-subtext">3 independent candidates will be synthesized & scored by DSP</div>
+          <div class="generate-subtext">&#9632; 3 independent candidates will be synthesized &amp; scored by DSP &#9632;</div>
         </div>
       </section>
 
@@ -153,8 +160,7 @@
             </div>
           </div>
           <h3>Awaiting Sound Input</h3>
-          <p>Upload a file or record your environment to extract its physical acoustic characteristics and generate an
-            original ~60-second composition.</p>
+          <p>Upload a file or record your acoustic environment to extract its physical audio characteristics and generate an original ~60-second procedural composition.</p>
         </div>
 
         <!-- Processing State -->
@@ -163,9 +169,8 @@
             <div class="circular-spinner"></div>
             <span class="progress-percent" id="progressPercent">15%</span>
           </div>
-          <h3 id="progressStage">Analyzing spectral, harmonic & rhythmic DNA...</h3>
-          <p class="processing-hint">Rendering resonant filter banks, granular clouds, and multi-track stems across 3
-            candidate variations.</p>
+          <h3 id="progressStage">Analyzing spectral, harmonic &amp; rhythmic DNA...</h3>
+          <p class="processing-hint">Rendering resonant filter banks, granular clouds, and multi-track stems across 3 candidate variations.</p>
           <div class="progress-bar-track">
             <div class="progress-bar-fill" id="progressBarFill"></div>
           </div>
@@ -240,7 +245,7 @@
 
             <div class="transformation-arrow">
               <span class="arrow-line"></span>
-              <span class="arrow-badge">&darr; ALGORITHMIC DSP TRANSFORMATION &darr;</span>
+              <span class="arrow-badge">&darr; 100% ALGORITHMIC DSP TRANSFORMATION &darr;</span>
               <span class="arrow-line"></span>
             </div>
 
@@ -271,7 +276,7 @@
           <!-- Acoustic DNA Panel -->
           <div class="dna-panel">
             <div class="dna-header">
-              <h3>Acoustic DNA Analysis & Stems</h3>
+              <h3>Acoustic DNA Analysis &amp; Stems</h3>
               <span class="category-pill" id="catPill">TEXTURAL</span>
             </div>
 
@@ -311,16 +316,11 @@
               <!-- Composition Breakdown -->
               <div class="dna-breakdown">
                 <ul class="breakdown-list">
-                  <li><strong>Detected Pitch:</strong> <span id="dnaDetectedPitch">None (Tuned Resonators
-                      Applied)</span></li>
-                  <li><strong>Source Stems:</strong> <span id="dnaActiveStems">Source Bed, Movement, Organic Groove,
-                      Accents, Resonance</span></li>
-                  <li><strong>Source Palette:</strong> <span id="dnaPaletteSlices">48 slices (Impacts, Pulses,
-                      Movements, Beds)</span></li>
-                  <li><strong>Classification Logic:</strong> <span id="dnaClassReason">High spectral flatness & low
-                      harmonicity</span></li>
-                  <li><strong>Arrangement Form:</strong> <span id="dnaFormName">Atmosphere &rarr; Pulse &rarr; Space
-                      &rarr; Climax &rarr; Resolution</span></li>
+                  <li><strong>Detected Pitch:</strong> <span id="dnaDetectedPitch">None (Tuned Resonators Applied)</span></li>
+                  <li><strong>Source Stems:</strong> <span id="dnaActiveStems">Source Bed, Movement, Organic Groove, Accents, Resonance</span></li>
+                  <li><strong>Source Palette:</strong> <span id="dnaPaletteSlices">48 slices (Impacts, Pulses, Movements, Beds)</span></li>
+                  <li><strong>Classification Logic:</strong> <span id="dnaClassReason">High spectral flatness &amp; low harmonicity</span></li>
+                  <li><strong>Arrangement Form:</strong> <span id="dnaFormName">Atmosphere &rarr; Pulse &rarr; Space &rarr; Climax &rarr; Resolution</span></li>
                 </ul>
               </div>
             </div>
@@ -340,9 +340,9 @@
     <audio id="sourceAudioPlayer" preload="auto"></audio>
     <audio id="resultAudioPlayer" preload="auto"></audio>
 
+    <!-- App Footer -->
     <footer class="app-footer">
-      <p>TheUnnecessaryFM &bull; Pure DSP Algorithmic Music Engine &bull; Zero Neural Networks &bull; Works 100% Offline
-      </p>
+      <p>THE UNNECESSARY FM &bull; 100% PURE DSP ALGORITHMIC MUSIC ENGINE &bull; ZERO NEURAL NETWORKS &bull; WORKS 100% OFFLINE &bull; TINKERHUB USELESS PROJECTS 3.0</p>
     </footer>
   </div>
 

@@ -82,6 +82,42 @@
 
   const sourceAudioPlayer = document.getElementById('sourceAudioPlayer');
   const resultAudioPlayer = document.getElementById('resultAudioPlayer');
+  const toastContainer = document.getElementById('toastContainer');
+
+  // Neo-Brutalist Toast Notifications
+  function showToast(message, type = 'info', title = '') {
+    if (!toastContainer) {
+      alert(message);
+      return;
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    const defaultTitle = type === 'error' ? 'ERROR' : (type === 'success' ? 'SUCCESS' : 'NOTICE');
+    toast.innerHTML = `
+      <div style="flex: 1;">
+        <div class="toast-title">${title || defaultTitle}</div>
+        <div class="toast-message">${escapeHtml(message)}</div>
+      </div>
+      <button type="button" class="toast-close" title="Close">&times;</button>
+    `;
+    toast.querySelector('.toast-close').addEventListener('click', () => {
+      toast.remove();
+    });
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      if (toast.parentElement) toast.remove();
+    }, 6000);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, s => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[s]));
+  }
 
   // State
   let currentFile = null;
@@ -216,7 +252,7 @@
       }, 60000);
 
     } catch (err) {
-      alert('Microphone access was denied or not available: ' + err.message);
+      showToast('Microphone access was denied or not available: ' + err.message, 'error', 'MIC ERROR');
     }
   }
 
@@ -257,15 +293,19 @@
       micAnimFrame = requestAnimationFrame(draw);
       micAnalyser.getByteFrequencyData(dataArray);
 
-      canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      canvasCtx.fillStyle = '#ffffff';
       canvasCtx.fillRect(0, 0, liveMicCanvas.width, liveMicCanvas.height);
+
+      // Neo-brutalist baseline
+      canvasCtx.fillStyle = '#000000';
+      canvasCtx.fillRect(0, liveMicCanvas.height - 2, liveMicCanvas.width, 2);
 
       const barWidth = (liveMicCanvas.width / dataArray.length) * 2;
       let x = 0;
       for (let i = 0; i < dataArray.length; i++) {
-        const barHeight = (dataArray[i] / 255) * liveMicCanvas.height;
-        canvasCtx.fillStyle = '#ef4444';
-        canvasCtx.fillRect(x, liveMicCanvas.height - barHeight, barWidth - 1, barHeight);
+        const barHeight = (dataArray[i] / 255) * (liveMicCanvas.height - 4);
+        canvasCtx.fillStyle = '#ff2a85';
+        canvasCtx.fillRect(x, liveMicCanvas.height - 2 - barHeight, Math.max(1, barWidth - 2), barHeight);
         x += barWidth;
       }
     }
@@ -336,7 +376,7 @@
       pollJobStatus(currentJobId);
 
     } catch (err) {
-      alert("Error: " + err.message);
+      showToast(err.message, 'error', 'GENERATION FAILED');
       hideProcessingState();
     }
   }
@@ -374,7 +414,7 @@
           loadFinalResults(jobId);
         } else if (statusData.status === 'failed') {
           clearInterval(pollInterval);
-          alert('Composition failed: ' + (statusData.error || 'Unknown DSP error'));
+          showToast(statusData.error || 'Unknown DSP error', 'error', 'COMPOSITION FAILED');
           hideProcessingState();
         }
       } catch (e) {
@@ -393,7 +433,7 @@
       renderCompositionUI(currentResultData);
 
     } catch (err) {
-      alert("Error loading result: " + err.message);
+      showToast(err.message, 'error', 'LOAD ERROR');
       hideProcessingState();
     }
   }
@@ -430,7 +470,7 @@
     // Source Audio Setup
     srcNameDisplay.textContent = result.source.filename || 'source.wav';
     sourceAudioPlayer.src = result.source.audio_url;
-    drawWaveformFromUrl(result.source.audio_url, srcWaveformCanvas, '#94a3b8', '#64748b');
+    drawWaveformFromUrl(result.source.audio_url, srcWaveformCanvas, '#000000', '#000000');
 
     // Build Candidate Tabs
     candidateTabs.innerHTML = '';
@@ -493,7 +533,7 @@
     resetResultPlayState();
 
     // Draw Result Waveform
-    drawWaveformFromUrl(cand.audio_url, resWaveformCanvas, '#06b6d4', '#10b981');
+    drawWaveformFromUrl(cand.audio_url, resWaveformCanvas, '#000000', '#000000');
   }
 
   // 7. Audio Playback & Interactive Waveform Scrubbing
@@ -598,16 +638,20 @@
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
-    ctx.clearRect(0, 0, width, height);
+    
+    // Crisp white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    // Center horizontal guideline
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, Math.floor(height / 2), width, 1);
 
     const numBars = 140;
     const step = Math.floor(samples.length / numBars);
-    const barWidth = (width / numBars) * 0.7;
+    const barWidth = Math.max(2, Math.floor((width / numBars) * 0.72));
 
-    const grad = ctx.createLinearGradient(0, 0, 0, height);
-    grad.addColorStop(0, color1);
-    grad.addColorStop(1, color2);
-    ctx.fillStyle = grad;
+    ctx.fillStyle = color1 || '#000000';
 
     for (let i = 0; i < numBars; i++) {
       let maxVal = 0;
@@ -618,13 +662,12 @@
       }
 
       // Nonlinear boost for visual clarity
-      const barHeight = Math.max(4, Math.pow(maxVal, 0.7) * (height * 0.85));
-      const x = (i / numBars) * width;
-      const y = (height - barHeight) / 2;
+      const barHeight = Math.max(3, Math.floor(Math.pow(maxVal, 0.7) * (height * 0.85)));
+      const x = Math.floor((i / numBars) * width);
+      const y = Math.floor((height - barHeight) / 2);
 
-      ctx.beginPath();
-      ctx.roundRect(x, y, barWidth, barHeight, 2);
-      ctx.fill();
+      // Authentic Neo-Brutalist sharp flat rectangular bars
+      ctx.fillRect(x, y, barWidth, barHeight);
     }
   }
 
@@ -632,12 +675,14 @@
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = color;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = color || '#000000';
 
     for (let i = 0; i < 100; i++) {
-      const barH = 10 + Math.sin(i * 0.2) * 20;
-      ctx.fillRect(i * (width / 100), (height - barH) / 2, 3, barH);
+      const barH = 8 + Math.sin(i * 0.2) * 20;
+      ctx.fillRect(Math.floor(i * (width / 100)), Math.floor((height - barH) / 2), 3, Math.floor(barH));
     }
   }
 
