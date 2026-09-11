@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TheUnnecessaryFM — 100% Algorithmic Procedural Audio Transformer</title>
+  <meta name="description"
+    content="Converts any arbitrary noise or audio recording into an enjoyable ~1-minute musical composition using only DSP, signal processing, and procedural music generation. No AI, no neural models.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="glow-orb glow-orb-1"></div>
+  <div class="glow-orb glow-orb-2"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M2 10v3"></path>
+            <path d="M6 6v11"></path>
+            <path d="M10 3v18"></path>
+            <path d="M14 8v7"></path>
+            <path d="M18 5v13"></path>
+            <path d="M22 10v4"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>TheUnnecessaryFM</h1>
+          <span class="badge badge-dsp">100% Pure DSP &bull; Algorithmic Audio Synthesis</span>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-indicator"></span>
+        <span class="status-label">DSP Engine Ready (Offline)</span>
+      </div>
+    </header>
+
+    <!-- Main Grid Layout -->
+    <main class="main-content">
+      <!-- Left Column: Input & Controls -->
+      <section class="card input-card">
+        <div class="card-header">
+          <h2>1. Source Sound Input</h2>
+          <p class="subtitle">Drop any sound (traffic, rain, keyboard, voice, metallic hits, fan noise)</p>
+        </div>
+
+        <!-- Drop Zone / File Input -->
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="audioFileInput" accept="audio/*,video/*" class="file-input-hidden">
+          <div class="drop-zone-content" id="dropZoneContent">
+            <div class="upload-icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <p class="drop-prompt"><strong>Drag & drop audio here</strong> or <span class="highlight">browse
+                files</span></p>
+            <span class="file-hint">Supports WAV, MP3, OGG, WebM, FLAC, M4A</span>
+          </div>
+
+          <!-- File Info Pill (Shown when file is chosen) -->
+          <div class="selected-file-pill hidden" id="selectedFilePill">
+            <span class="file-icon">&#9835;</span>
+            <div class="file-details">
+              <span class="selected-name" id="selectedFileName">filename.wav</span>
+              <span class="selected-size" id="selectedFileSize">0.0 MB</span>
+            </div>
+            <button type="button" class="btn-remove" id="btnRemoveFile" title="Remove">&times;</button>
+          </div>
+        </div>
+
+        <!-- Microphone Recording Bar -->
+        <div class="mic-section">
+          <div class="mic-header">
+            <span class="divider-text">OR CAPTURE WITH MICROPHONE</span>
+          </div>
+          <div class="mic-controls">
+            <button type="button" class="btn btn-mic" id="btnRecord">
+              <span class="record-dot"></span>
+              <span id="recordBtnText">Record Mic (5–60s)</span>
+            </button>
+            <div class="rec-timer hidden" id="recTimer">
+              <span class="rec-pulse"></span>
+              <span id="recTimeDisplay">00:00</span>
+              <span class="rec-max">/ 01:00 max</span>
+            </div>
+          </div>
+          <canvas id="liveMicCanvas" class="live-mic-canvas hidden" width="360" height="40"></canvas>
+        </div>
+
+        <!-- Composition Parameters -->
+        <div class="params-section">
+          <h3>2. Composition Directives</h3>
+          <div class="param-grid">
+            <div class="param-group">
+              <label for="beatSelect">Rhythmic Beat</label>
+              <select id="beatSelect" class="form-select">
+                <option value="minimal" selected>Minimal (Default 40-60%)</option>
+                <option value="none">No Drums (Atmospheric)</option>
+                <option value="light_percussion">Light Percussion</option>
+                <option value="rhythmic">Rhythmic Pulse</option>
+              </select>
+            </div>
+
+            <div class="param-group">
+              <label for="energySelect">Dynamic Energy</label>
+              <select id="energySelect" class="form-select">
+                <option value="balanced" selected>Balanced Arc</option>
+                <option value="low">Subtle & Ambient</option>
+                <option value="high">High Dynamics</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="param-group seed-group">
+            <div class="seed-header">
+              <label for="seedInput">Random Seed <span class="label-hint">(leave empty for automatic)</span></label>
+              <button type="button" class="btn-text-action" id="btnRandomizeSeed">&#x21bb; Randomize</button>
+            </div>
+            <input type="number" id="seedInput" class="form-input" placeholder="e.g. 8492049182">
+          </div>
+        </div>
+
+        <!-- Generate CTA Button -->
+        <div class="action-section">
+          <button type="button" class="btn btn-generate" id="btnGenerate" disabled>
+            <span class="btn-sparkle">&#x2728;</span>
+            <span>CREATE MUSIC (~60s)</span>
+          </button>
+          <div class="generate-subtext">3 independent candidates will be synthesized & scored by DSP</div>
+        </div>
+      </section>
+
+      <!-- Right Column: Results & DNA Visualizer -->
+      <section class="card result-card" id="resultCard">
+        <!-- Initial Empty Placeholder -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-visual">
+            <div class="sound-bars">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+          <h3>Awaiting Sound Input</h3>
+          <p>Upload a file or record your environment to extract its physical acoustic characteristics and generate an
+            original ~60-second composition.</p>
+        </div>
+
+        <!-- Processing State -->
+        <div class="processing-state hidden" id="processingState">
+          <div class="spinner-container">
+            <div class="circular-spinner"></div>
+            <span class="progress-percent" id="progressPercent">15%</span>
+          </div>
+          <h3 id="progressStage">Analyzing spectral, harmonic & rhythmic DNA...</h3>
+          <p class="processing-hint">Rendering resonant filter banks, granular clouds, and multi-track stems across 3
+            candidate variations.</p>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+          </div>
+        </div>
+
+        <!-- Active Results Display -->
+        <div class="results-display hidden" id="resultsDisplay">
+          <!-- Candidate Switcher Header -->
+          <div class="candidate-bar">
+            <span class="candidate-title">COMPOSITION CANDIDATES:</span>
+            <div class="candidate-tabs" id="candidateTabs">
+              <button type="button" class="cand-tab active" data-index="0">Candidate A <span
+                  class="tag-winner">WINNER</span></button>
+              <button type="button" class="cand-tab" data-index="1">Candidate B</button>
+              <button type="button" class="cand-tab" data-index="2">Candidate C</button>
+            </div>
+          </div>
+
+          <!-- Winner / Active Candidate Info Banner -->
+          <div class="composition-meta-banner">
+            <div class="meta-item">
+              <span class="meta-label">TEMPO</span>
+              <span class="meta-val" id="metaTempo">94 BPM</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">SCALE</span>
+              <span class="meta-val highlight" id="metaScale">D Minor</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">DURATION</span>
+              <span class="meta-val" id="metaDuration">61.5 sec</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">SOURCE MATERIAL</span>
+              <span class="meta-val tag-winner" id="metaSourceRatio">100%</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">SYNTHETIC</span>
+              <span class="meta-val" id="metaSynthRatio">0%</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">DSP SCORE</span>
+              <span class="meta-val score-val" id="metaScore">68.4 / 100</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">SEED</span>
+              <span class="meta-val code-font" id="metaSeed">49201948</span>
+            </div>
+          </div>
+
+          <!-- Dual Waveforms: Source vs Transformed -->
+          <div class="waveforms-container">
+            <!-- Source Waveform -->
+            <div class="waveform-block source-block">
+              <div class="wf-header">
+                <span class="wf-title">
+                  <span class="wf-tag tag-src">SOURCE AUDIO</span>
+                  <span id="srcNameDisplay">rain_sample.wav</span>
+                </span>
+                <span class="wf-time" id="srcTimeDisplay">00:00 / 00:00</span>
+              </div>
+              <div class="wf-canvas-wrapper" id="srcCanvasWrapper">
+                <canvas id="srcWaveformCanvas" width="700" height="70"></canvas>
+                <div class="playhead" id="srcPlayhead"></div>
+              </div>
+              <div class="wf-controls">
+                <button type="button" class="btn-play-small" id="btnPlaySource">
+                  <span id="srcPlayIcon">&#9658;</span> <span id="srcPlayText">Play Source</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="transformation-arrow">
+              <span class="arrow-line"></span>
+              <span class="arrow-badge">&darr; ALGORITHMIC DSP TRANSFORMATION &darr;</span>
+              <span class="arrow-line"></span>
+            </div>
+
+            <!-- Result Musical Waveform -->
+            <div class="waveform-block result-block">
+              <div class="wf-header">
+                <span class="wf-title">
+                  <span class="wf-tag tag-res">TRANSFORMED COMPOSITION</span>
+                  <span id="resFormDisplay">Intro &rarr; A &rarr; B &rarr; A &rarr; Outro</span>
+                </span>
+                <span class="wf-time" id="resTimeDisplay">00:00 / 01:00</span>
+              </div>
+              <div class="wf-canvas-wrapper" id="resCanvasWrapper">
+                <canvas id="resWaveformCanvas" width="700" height="90"></canvas>
+                <div class="playhead" id="resPlayhead"></div>
+              </div>
+              <div class="wf-controls main-controls">
+                <button type="button" class="btn btn-play-main" id="btnPlayResult">
+                  <span id="resPlayIcon">&#9658;</span> <span id="resPlayText">Play Composition</span>
+                </button>
+                <a id="btnDownload" class="btn btn-download" download="unnecessaryfm_composition.wav" href="#">
+                  &#x2913; Download Master WAV
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acoustic DNA Panel -->
+          <div class="dna-panel">
+            <div class="dna-header">
+              <h3>Acoustic DNA Analysis & Stems</h3>
+              <span class="category-pill" id="catPill">TEXTURAL</span>
+            </div>
+
+            <div class="dna-grid">
+              <!-- Feature Meters -->
+              <div class="dna-meters">
+                <div class="meter-row">
+                  <span class="m-label">Rhythmic Density</span>
+                  <div class="meter-bar">
+                    <div class="meter-fill" id="meterRhythm" style="width: 30%;"></div>
+                  </div>
+                  <span class="m-val" id="valRhythm">0.40</span>
+                </div>
+                <div class="meter-row">
+                  <span class="m-label">Harmonicity</span>
+                  <div class="meter-bar">
+                    <div class="meter-fill fill-cyan" id="meterHarmonic" style="width: 65%;"></div>
+                  </div>
+                  <span class="m-val" id="valHarmonic">0.65</span>
+                </div>
+                <div class="meter-row">
+                  <span class="m-label">Noisiness / Texture</span>
+                  <div class="meter-bar">
+                    <div class="meter-fill fill-amber" id="meterTexture" style="width: 80%;"></div>
+                  </div>
+                  <span class="m-val" id="valTexture">0.80</span>
+                </div>
+                <div class="meter-row">
+                  <span class="m-label">Spectral Brightness</span>
+                  <div class="meter-bar">
+                    <div class="meter-fill fill-purple" id="meterEnergy" style="width: 50%;"></div>
+                  </div>
+                  <span class="m-val" id="valEnergy">0.50</span>
+                </div>
+              </div>
+
+              <!-- Composition Breakdown -->
+              <div class="dna-breakdown">
+                <ul class="breakdown-list">
+                  <li><strong>Detected Pitch:</strong> <span id="dnaDetectedPitch">None (Tuned Resonators
+                      Applied)</span></li>
+                  <li><strong>Source Stems:</strong> <span id="dnaActiveStems">Source Bed, Movement, Organic Groove,
+                      Accents, Resonance</span></li>
+                  <li><strong>Source Palette:</strong> <span id="dnaPaletteSlices">48 slices (Impacts, Pulses,
+                      Movements, Beds)</span></li>
+                  <li><strong>Classification Logic:</strong> <span id="dnaClassReason">High spectral flatness & low
+                      harmonicity</span></li>
+                  <li><strong>Arrangement Form:</strong> <span id="dnaFormName">Atmosphere &rarr; Pulse &rarr; Space
+                      &rarr; Climax &rarr; Resolution</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Regenerate / Variation Button -->
+          <div class="regenerate-bar">
+            <button type="button" class="btn btn-secondary" id="btnRegenerateNew">
+              &#x21bb; Generate 3 New Variations from this Source
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Hidden Audio Elements -->
+    <audio id="sourceAudioPlayer" preload="auto"></audio>
+    <audio id="resultAudioPlayer" preload="auto"></audio>
+
+    <footer class="app-footer">
+      <p>TheUnnecessaryFM &bull; Pure DSP Algorithmic Music Engine &bull; Zero Neural Networks &bull; Works 100% Offline
+      </p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
