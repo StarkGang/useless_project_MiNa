@@ -2,3 +2,6 @@
 *.wav
 *.webm
 *.mp3
+outputs/*.json
+outputs/*.wav
+scratch/

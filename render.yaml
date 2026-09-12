@@ -11,3 +11,15 @@ services:
         value: 8000
       - key: NUM_CANDIDATES
         value: "1"
+      - key: RENDER
+        value: "1"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: BLIS_NUM_THREADS
+        value: "1"

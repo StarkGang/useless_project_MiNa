@@ -67,28 +67,102 @@ class JobRecord:
     analysis: Optional[Dict[str, Any]] = None
     winner_result: Optional[Dict[str, Any]] = None
     candidates: Optional[List[Dict[str, Any]]] = None
-    beat_preference: str = "minimal"
+    beat_preference: str = "pop"
     energy_preference: str = "balanced"
     custom_seed: Optional[int] = None
     num_candidates: Optional[int] = None
+    target_duration: float = 30.0
 
 
 class JobManager:
-    """Thread-safe in-memory job registry."""
+    """Thread-safe and disk-backed job registry with real-time SSE pub/sub streaming and disk pruning."""
     def __init__(self):
         self.jobs: Dict[str, JobRecord] = {}
+        self.subscribers: Dict[str, List[asyncio.Queue]] = {}
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def subscribe(self, job_id: str) -> asyncio.Queue:
+        try:
+            self.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        q = asyncio.Queue()
+        if job_id not in self.subscribers:
+            self.subscribers[job_id] = []
+        self.subscribers[job_id].append(q)
+        return q
+
+    def unsubscribe(self, job_id: str, q: asyncio.Queue) -> None:
+        if job_id in self.subscribers:
+            try:
+                self.subscribers[job_id].remove(q)
+            except ValueError:
+                pass
+            if not self.subscribers[job_id]:
+                del self.subscribers[job_id]
+
+    def cleanup_old_files(self, max_age_seconds: float = 1800.0, max_jobs: int = 15) -> None:
+        """Prune old audio files and keep memory / disk lean on Render free tier."""
+        now = time.time()
+        # 1. Prune memory jobs if exceeding max_jobs
+        if len(self.jobs) > max_jobs:
+            sorted_jobs = sorted(self.jobs.values(), key=lambda j: j.created_at)
+            for old_j in sorted_jobs[:-max_jobs]:
+                self.jobs.pop(old_j.job_id, None)
+
+        # 2. Prune old temporary audio files on disk (> 30 minutes old)
+        for folder in [UPLOAD_DIR, OUTPUT_DIR]:
+            try:
+                for item in folder.glob("*"):
+                    if item.is_file() and not item.name.startswith("test_"):
+                        try:
+                            mtime = item.stat().st_mtime
+                            if (now - mtime) > max_age_seconds:
+                                item.unlink(missing_ok=True)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+    def _save_to_disk(self, job: JobRecord) -> None:
+        try:
+            record_path = OUTPUT_DIR / f"{job.job_id}_record.json"
+            data = asdict(job)
+            import json
+            with open(record_path, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+        except Exception:
+            pass
+
+    def _load_from_disk(self, job_id: str) -> Optional[JobRecord]:
+        try:
+            record_path = OUTPUT_DIR / f"{job_id}_record.json"
+            if record_path.exists():
+                import json
+                with open(record_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                job = JobRecord(**data)
+                self.jobs[job_id] = job
+                return job
+        except Exception:
+            pass
+        return None
 
     def create_job(
         self,
         source_filename: str,
-        beat_preference: str = "minimal",
+        beat_preference: str = "pop",
         energy_preference: str = "balanced",
         custom_seed: Optional[int] = None,
-        num_candidates: Optional[int] = None
+        num_candidates: Optional[int] = None,
+        target_duration: float = 30.0
     ) -> JobRecord:
+        # Prune old files on each new job creation
+        self.cleanup_old_files()
+
         job_id = uuid.uuid4().hex[:10]
         eff_cands = num_candidates or int(os.environ.get("NUM_CANDIDATES", "1"))
-        eff_cands = max(1, min(eff_cands, 5))
+        eff_cands = max(1, min(eff_cands, 3))
         job = JobRecord(
             job_id=job_id,
             status="queued",
@@ -99,19 +173,43 @@ class JobManager:
             beat_preference=beat_preference,
             energy_preference=energy_preference,
             custom_seed=custom_seed,
-            num_candidates=eff_cands
+            num_candidates=eff_cands,
+            target_duration=target_duration
         )
         self.jobs[job_id] = job
+        self._save_to_disk(job)
         return job
 
     def get_job(self, job_id: str) -> Optional[JobRecord]:
-        return self.jobs.get(job_id)
+        job = self.jobs.get(job_id)
+        if not job:
+            job = self._load_from_disk(job_id)
+        return job
 
     def update_job(self, job_id: str, **kwargs) -> None:
-        if job_id in self.jobs:
-            job = self.jobs[job_id]
+        job = self.get_job(job_id)
+        if job:
             for k, v in kwargs.items():
                 setattr(job, k, v)
+            self._save_to_disk(job)
+
+            # Notify active SSE subscribers immediately
+            if job_id in self.subscribers:
+                msg = {
+                    "job_id": job.job_id,
+                    "status": job.status,
+                    "stage": job.stage,
+                    "progress": job.progress,
+                    "error": job.error_message
+                }
+                for q in list(self.subscribers[job_id]):
+                    try:
+                        if self.loop and self.loop.is_running():
+                            self.loop.call_soon_threadsafe(q.put_nowait, msg)
+                        else:
+                            q.put_nowait(msg)
+                    except Exception:
+                        pass
 
 
 # Global singleton manager
@@ -134,8 +232,9 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
         sf.write(str(clean_src_path), prep.stereo.T, prep.sr)
 
         # Step 2: Audio Analysis & Feature Extraction
-        job_manager.update_job(job_id, stage="Extracting spectral, harmonic & rhythmic DNA...", progress=35)
-        analysis = analyze_audio(prep.mono, sr=prep.sr)
+        job_manager.update_job(job_id, stage="Extracting spectral, harmonic & rhythmic DNA...", progress=20)
+        progress_cb = lambda pct, msg: job_manager.update_job(job_id, progress=pct, stage=msg)
+        analysis = analyze_audio(prep.mono, sr=prep.sr, on_progress=progress_cb)
 
         # Serialize analysis for frontend DNA visualizer
         analysis_data = {
@@ -164,12 +263,10 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
             "harmonicity": analysis.texture.harmonicity,
             "temporal_entropy": analysis.texture.temporal_entropy
         }
-        job_manager.update_job(job_id, analysis=analysis_data, source_duration=prep.duration, progress=50)
+        job_manager.update_job(job_id, analysis=analysis_data, source_duration=prep.duration, progress=52)
 
         # Step 3: Procedural Composition (candidates count configurable)
-        cands_count = job.num_candidates or 2
-        stage_text = f"Procedurally synthesizing {cands_count} musical candidate{'s' if cands_count > 1 else ''}..."
-        job_manager.update_job(job_id, stage=stage_text, progress=60)
+        cands_count = job.num_candidates or 1
         winner, all_candidates = generate_candidates(
             prep=prep,
             analysis=analysis,
@@ -177,10 +274,11 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
             beat_preference=job.beat_preference,
             energy_preference=job.energy_preference,
             num_candidates=cands_count,
-            on_progress=lambda pct, msg: job_manager.update_job(job_id, progress=pct, stage=msg)
+            on_progress=progress_cb,
+            target_duration=job.target_duration
         )
 
-        job_manager.update_job(job_id, stage="Scoring candidates & mastering winner...", progress=85)
+        job_manager.update_job(job_id, stage="Finalizing audio stems & exporting WAV...", progress=98)
 
         # Step 4: Write Audio WAV Files to Output
         candidates_data = []
@@ -231,6 +329,8 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
             winner_result=winner_data,
             candidates=candidates_data
         )
+        import gc
+        gc.collect()
 
     except Exception as e:
         import traceback
@@ -247,10 +347,11 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
 
 async def submit_generation_job(
     input_file_path: str,
-    beat_preference: str = "minimal",
+    beat_preference: str = "pop",
     energy_preference: str = "balanced",
     custom_seed: Optional[int] = None,
-    num_candidates: Optional[int] = None
+    num_candidates: Optional[int] = None,
+    target_duration: float = 30.0
 ) -> str:
     """Create job and run in asyncio thread executor."""
     job = job_manager.create_job(
@@ -258,10 +359,17 @@ async def submit_generation_job(
         beat_preference=beat_preference,
         energy_preference=energy_preference,
         custom_seed=custom_seed,
-        num_candidates=num_candidates
+        num_candidates=num_candidates,
+        target_duration=target_duration
     )
 
     loop = asyncio.get_running_loop()
-    loop.run_in_executor(None, run_pipeline_sync, job.job_id, input_file_path)
+    if is_serverless:
+        # On Vercel / serverless: background threads are frozen immediately when the HTTP response returns!
+        # Await pipeline execution so generation completes reliably within the Lambda invocation.
+        await loop.run_in_executor(None, run_pipeline_sync, job.job_id, input_file_path)
+    else:
+        loop.run_in_executor(None, run_pipeline_sync, job.job_id, input_file_path)
 
     return job.job_id
+

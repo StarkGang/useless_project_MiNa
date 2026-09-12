@@ -9,6 +9,8 @@ Endpoints:
   - GET  /api/source-audio/{job_id}: Preprocessed source audio streaming
 """
 
+import asyncio
+import json
 import os
 import shutil
 import uuid
@@ -16,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from ..dsp.analysis import analyze_audio
 from ..dsp.preprocess import preprocess_audio
@@ -90,10 +92,11 @@ async def analyze_uploaded_audio(file: UploadFile = File(...)):
 async def generate_music(
     file: Optional[UploadFile] = File(None),
     existing_job_id: Optional[str] = Form(None),
-    beat_preference: str = Form("minimal"),
+    beat_preference: str = Form("pop"),
     energy_preference: str = Form("balanced"),
     seed: Optional[str] = Form(None),
-    num_candidates: Optional[int] = Form(None)
+    num_candidates: Optional[int] = Form(None),
+    duration_seconds: Optional[int] = Form(None)
 ):
     """
     Submits a procedural music generation request.
@@ -124,13 +127,17 @@ async def generate_music(
     else:
         raise HTTPException(status_code=400, detail="Please upload an audio file or microphone recording.")
 
+    # Validate and clamp duration (30s or 60s, default 30)
+    target_dur = float(duration_seconds) if duration_seconds in (30, 60) else 30.0
+
     # Submit background generation task
     job_id = await submit_generation_job(
         input_file_path=str(target_path),
         beat_preference=beat_preference,
         energy_preference=energy_preference,
         custom_seed=custom_seed_val,
-        num_candidates=num_candidates
+        num_candidates=num_candidates,
+        target_duration=target_dur
     )
 
     return {
@@ -138,6 +145,58 @@ async def generate_music(
         "status": "queued",
         "message": "Procedural music generation job queued."
     }
+
+
+@router.get("/progress/{job_id}")
+async def stream_job_progress(job_id: str):
+    """
+    Server-Sent Events (SSE) endpoint for real-time progress updates.
+    Directly streams backend stage and progress events without client polling.
+    """
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    async def event_generator():
+        queue = job_manager.subscribe(job_id)
+        try:
+            # Yield current state immediately upon connection
+            init_data = {
+                "job_id": job.job_id,
+                "status": job.status,
+                "stage": job.stage,
+                "progress": job.progress,
+                "error": job.error_message
+            }
+            yield f"data: {json.dumps(init_data)}\n\n"
+            if job.status in ("completed", "failed"):
+                return
+
+            while True:
+                try:
+                    data = await asyncio.wait_for(queue.get(), timeout=12.0)
+                    yield f"data: {json.dumps(data)}\n\n"
+                    if data.get("status") in ("completed", "failed"):
+                        break
+                except asyncio.TimeoutError:
+                    # Keep-alive heartbeat ping so proxies/browsers don't drop the connection
+                    yield ": ping\n\n"
+                    # Check current status in case an event was missed
+                    current_job = job_manager.get_job(job_id)
+                    if not current_job or current_job.status in ("completed", "failed"):
+                        break
+        finally:
+            job_manager.unsubscribe(job_id, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 @router.get("/status/{job_id}")
