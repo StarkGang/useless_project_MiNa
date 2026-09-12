@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple
 
-import imageio_ffmpeg
+try:
+    import imageio_ffmpeg
+except ImportError:
+    imageio_ffmpeg = None
+
 import numpy as np
 import soundfile as sf
 
@@ -35,18 +39,19 @@ class PreprocessedAudio:
 
 def get_ffmpeg_binary() -> str:
     """Locate the FFmpeg binary using imageio_ffmpeg or system PATH."""
-    try:
-        exe = imageio_ffmpeg.get_ffmpeg_exe()
-        if exe and os.path.exists(exe):
-            return exe
-    except Exception:
-        pass
+    if imageio_ffmpeg is not None:
+        try:
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+            if exe and os.path.exists(exe):
+                return exe
+        except Exception:
+            pass
 
     sys_ffmpeg = shutil.which("ffmpeg")
     if sys_ffmpeg:
         return sys_ffmpeg
 
-    raise RuntimeError("FFmpeg executable not found. Please install ffmpeg or imageio-ffmpeg.")
+    return "ffmpeg"
 
 
 def decode_to_wav(input_path: str, output_wav_path: str, target_sr: int = TARGET_SR) -> None:
@@ -109,6 +114,11 @@ def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio
                     os.remove(temp_wav_path)
                 except OSError:
                     pass
+
+    # Cap maximum duration to 30s to prevent OOM on 512MB RAM containers
+    max_allowed_samples = int(30 * target_sr)
+    if data.shape[0] > max_allowed_samples:
+        data = data[:max_allowed_samples]
 
     num_samples, orig_channels = data.shape
 

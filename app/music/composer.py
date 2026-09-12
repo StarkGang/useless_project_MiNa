@@ -465,10 +465,22 @@ def generate_candidates(
         target_slice_count=48
     )
 
+    # Pre-render shared pad once across candidates to avoid repeated heavy granular synthesis
+    shared_pad = create_granular_pad(
+        prep.mono,
+        target_duration=60.0,
+        semitone_shift=0.0,
+        grain_duration=0.16,
+        density=20.0,
+        sr=prep.sr,
+        stereo_spread=True
+    )
+
     seeds = [base_seed]
     for _ in range(num_candidates - 1):
         seeds.append(generate_seed())
 
+    import gc
     candidates: List[CompositionResult] = []
     for idx, s in enumerate(seeds):
         if on_progress:
@@ -480,9 +492,11 @@ def generate_candidates(
             seed=s,
             beat_preference=beat_preference,
             energy_preference=energy_preference,
-            palette=palette
+            palette=palette,
+            shared_pad=shared_pad
         )
         candidates.append(cand)
+        gc.collect()
         time.sleep(0.01)  # Yield CPU slice to OS scheduler to prevent UI stutter
 
     candidates.sort(key=lambda c: c.score.total_score, reverse=True)

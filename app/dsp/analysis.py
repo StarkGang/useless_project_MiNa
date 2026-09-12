@@ -92,19 +92,24 @@ def compute_texture_features(
     rhythm: RhythmFeatures,
     sr: int = 44100
 ) -> TextureFeatures:
-    # Fast autocorrelation & spectral-based harmonicity (sub-millisecond, avoids heavy 2D HPSS and memory spike)
+    # Blazing fast FFT-based autocorrelation for harmonicity (avoids heavy O(N^2) CPU spike)
     try:
-        sub_len = min(len(audio), sr * 3)
+        sub_len = min(len(audio), sr * 1)
         sub = audio[:sub_len]
-        corr = np.correlate(sub, sub, mode='full')
-        corr = corr[len(corr) // 2:]
-        min_lag = int(sr / 1200.0)
-        max_lag = min(len(corr) - 1, int(sr / 60.0))
-        if max_lag > min_lag and corr[0] > 1e-7:
-            peak_val = float(np.max(corr[min_lag:max_lag]))
-            harmonicity = float(np.clip(peak_val / corr[0], 0.0, 1.0))
+        if len(sub) > 0:
+            n = len(sub)
+            n_fft = 2 ** int(np.ceil(np.log2(2 * n - 1)))
+            fx = np.fft.rfft(sub, n=n_fft)
+            corr = np.fft.irfft(fx * np.conj(fx))[:n]
+            min_lag = int(sr / 1200.0)
+            max_lag = min(len(corr) - 1, int(sr / 60.0))
+            if max_lag > min_lag and corr[0] > 1e-7:
+                peak_val = float(np.max(corr[min_lag:max_lag]))
+                harmonicity = float(np.clip(peak_val / corr[0], 0.0, 1.0))
+            else:
+                harmonicity = float(np.clip(1.0 - spec.spectral_flatness, 0.0, 1.0))
         else:
-            harmonicity = float(np.clip(1.0 - spec.spectral_flatness, 0.0, 1.0))
+            harmonicity = 0.5
     except Exception:
         harmonicity = 0.5
 

@@ -39,9 +39,10 @@ def analyze_rhythm(audio: np.ndarray, sr: int = 44100) -> RhythmFeatures:
             onset_samples=[]
         )
 
-    # 1. Onset strength envelope
+    # 1. Onset strength envelope (limit to 12s to prevent excessive STFT memory on 512MB RAM hosts)
     hop_length = 512
-    onset_env = librosa.onset.onset_strength(y=audio, sr=sr, hop_length=hop_length)
+    analysis_audio = audio[:min(len(audio), sr * 12)]
+    onset_env = librosa.onset.onset_strength(y=analysis_audio, sr=sr, hop_length=hop_length)
 
     # 2. Onset peak detection
     onset_frames = librosa.onset.onset_detect(

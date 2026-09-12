@@ -22,7 +22,7 @@ from ..dsp.analysis import analyze_audio
 from ..dsp.preprocess import preprocess_audio
 from .jobs import OUTPUT_DIR, UPLOAD_DIR, job_manager, submit_generation_job
 
-router = APIRouter(prefix="/api")
+router = APIRouter()
 
 
 @router.get("/health")

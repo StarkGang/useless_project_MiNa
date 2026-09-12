@@ -83,9 +83,9 @@ def analyze_pitch(audio: np.ndarray, sr: int = 44100) -> PitchFeatures:
         chroma_norm = np.ones(12) / 12.0
 
     # 2. Fundamental Frequency (F0) estimation via Autocorrelation & Harmonic Peaks
-    # Analyze middle chunk (up to 4 seconds) to balance accuracy and speed
+    # Analyze 2-second center window for fast execution on low-CPU containers
     center = len(audio) // 2
-    chunk_len = min(len(audio), sr * 4)
+    chunk_len = min(len(audio), sr * 2)
     start = max(0, center - chunk_len // 2)
     chunk = audio[start:start + chunk_len]
 
@@ -96,7 +96,7 @@ def analyze_pitch(audio: np.ndarray, sr: int = 44100) -> PitchFeatures:
     else:
         chunk_ds = chunk
 
-    # Calculate frame-by-frame F0 using YIN/pYIN DSP algorithm
+    # Calculate frame-by-frame F0 using YIN/pYIN DSP algorithm (hop_length=1024 for 2x speedup)
     fmin = 55.0   # A1 (~55 Hz)
     fmax = 1000.0 # B5 (~987 Hz)
     try:
@@ -106,7 +106,7 @@ def analyze_pitch(audio: np.ndarray, sr: int = 44100) -> PitchFeatures:
             fmax=fmax,
             sr=target_sr,
             frame_length=1024,
-            hop_length=512
+            hop_length=1024
         )
         valid_f0 = f0[voiced_flag & ~np.isnan(f0)]
         valid_probs = voiced_probs[voiced_flag & ~np.isnan(f0)]

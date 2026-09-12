@@ -7,3 +7,9 @@ images/
 .git/
 .github/
 .dockerignore
+.vercel
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+README.md

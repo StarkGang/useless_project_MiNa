@@ -23,21 +23,34 @@ from ..dsp.preprocess import PreprocessedAudio, preprocess_audio
 from ..music.composer import CompositionResult, generate_candidates
 from ..utils.random import generate_seed
 
-if os.environ.get("VERCEL"):
+is_serverless = bool(
+    os.environ.get("VERCEL")
+    or os.environ.get("VERCEL_ENV")
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+    or os.environ.get("USE_TMP_STORAGE")
+)
+
+if is_serverless:
     UPLOAD_DIR = Path("/tmp/uploads")
     OUTPUT_DIR = Path("/tmp/outputs")
 else:
-    UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
-    OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "outputs"
+    try:
+        candidate_upload = Path(__file__).resolve().parent.parent.parent / "uploads"
+        candidate_output = Path(__file__).resolve().parent.parent.parent / "outputs"
+        candidate_upload.mkdir(parents=True, exist_ok=True)
+        candidate_output.mkdir(parents=True, exist_ok=True)
+        # Test write permission
+        test_file = candidate_upload / ".test_write"
+        test_file.touch()
+        test_file.unlink()
+        UPLOAD_DIR = candidate_upload
+        OUTPUT_DIR = candidate_output
+    except Exception:
+        UPLOAD_DIR = Path("/tmp/uploads")
+        OUTPUT_DIR = Path("/tmp/outputs")
 
-try:
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-except OSError:
-    UPLOAD_DIR = Path("/tmp/uploads")
-    OUTPUT_DIR = Path("/tmp/outputs")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -74,7 +87,7 @@ class JobManager:
         num_candidates: Optional[int] = None
     ) -> JobRecord:
         job_id = uuid.uuid4().hex[:10]
-        eff_cands = num_candidates or int(os.environ.get("NUM_CANDIDATES", "2"))
+        eff_cands = num_candidates or int(os.environ.get("NUM_CANDIDATES", "1"))
         eff_cands = max(1, min(eff_cands, 5))
         job = JobRecord(
             job_id=job_id,

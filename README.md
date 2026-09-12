@@ -43,14 +43,17 @@ For Software:
 For Software:
 
 # Screenshots (Add at least 3)
-![Screenshot1](Add screenshot 1 here with proper name)
-*Add caption explaining what this shows*
+![Screenshot1](images/ss/ss_1.png)
+Initial View Dashboard
 
-![Screenshot2](Add screenshot 2 here with proper name)
-*Add caption explaining what this shows*
+![Screenshot2](images/ss/ss_2.png)
+Selecting an Audio and showcasing different Genre
 
-![Screenshot3](Add screenshot 3 here with proper name)
-*Add caption explaining what this shows*
+![Screenshot3](images/ss/ss_3.png)
+Loading & Processing the Noise...
+
+![Screenshot4](images/ss/ss_4.png)
+Tada! The music that no one asked for, is here!...
 
 # Diagrams
 ![Workflow Architecture](images/po.png)
@@ -60,11 +63,10 @@ The workflow starts when the user uploads a sound or noise through the frontend.
 
 ### Project Demo
 # Video
-[Add your demo video link here]
-*Explain what the video demonstrates*
+[View Project Demo on Youtube!](https://youtu.be/6UWJPu9qXvg?si=80bX1X65h8RAKWNL)
 
 # Additional Demos
-[Add any extra demo materials/links]
+[View it Live!](https://useless-project-mina.onrender.com/)
 
 
 ---
