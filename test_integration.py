@@ -10,7 +10,7 @@ assert 'TheUnnecessaryFM' in r.text, 'Brand not found in HTML'
 print('1. Static frontend served successfully!')
 
 # 2. Test Analyze Endpoint
-with open('/uploads/test_rain.wav', 'rb') as f:
+with open('uploads/test_rain.wav', 'rb') as f:
     r = requests.post(f'{base_url}/api/analyze', files={'file': ('rain.wav', f, 'audio/wav')})
 assert r.status_code == 200, f'Analyze failed: {r.text}'
 res_analyze = r.json()
@@ -19,7 +19,7 @@ print('   Classification:', res_analyze['classification'])
 print('   Centroid:', res_analyze['dna']['spectral_centroid'], 'Hz')
 
 # 3. Test Generate Endpoint
-with open('/uploads/test_rain.wav', 'rb') as f:
+with open('uploads/test_rain.wav', 'rb') as f:
     r = requests.post(
         f'{base_url}/api/generate',
         files={'file': ('rain.wav', f, 'audio/wav')},
