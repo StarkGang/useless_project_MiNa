@@ -8,6 +8,7 @@
   <meta name="description"
     content="Turns random noise into music. Record or upload, ta daa... your one minute music is ready! 100% algorithmic procedural audio synthesis. Team MiNa • TinkerHub Useless Projects 3.0">
   <meta name="api-base-url" content="">
+  <meta name="application-name" content="TheUnnecessaryFM">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -77,7 +78,7 @@
             </div>
             <div class="lib-info">
               <span class="lib-title" id="libTrackTitle">Active Composition</span>
-              <span class="lib-desc" id="libTrackMeta">Procedural 60s Stream</span>
+              <span class="lib-desc" id="libTrackMeta">Procedural 30s Stream</span>
             </div>
           </div>
 
@@ -109,7 +110,13 @@
           <div class="credits-tags">
             <span class="pill-chip">FastAPI</span>
             <span class="pill-chip">NumPy/DSP</span>
-            <span class="pill-chip">Zero Neural AI</span>
+            <span class="pill-chip">Pure DSP</span>
+          </div>
+          <div class="credits-repo">
+            <a href="https://github.com/nayanapottekkad/useless_project_MiNa/" target="_blank" rel="noopener noreferrer" class="repo-link-sidebar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              nayanapottekkad/useless_project_MiNa
+            </a>
           </div>
         </div>
       </div>
@@ -159,94 +166,42 @@
           <div class="hero-backdrop"></div>
           <div class="hero-content">
             <div class="hero-artwork">
-              <div class="vinyl-art">
-                <div class="vinyl-ring">
-                  <div class="vinyl-center">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                    </svg>
-                  </div>
+              <div class="clean-hero-cover" title="The Unnecessary FM">
+                <div class="cover-inner">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hero-cover-icon">
+                    <path d="M9 18V5l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
+                  </svg>
+                  <span class="cover-brand">THE UNNECESSARY FM</span>
                 </div>
               </div>
             </div>
 
             <div class="hero-details">
+              <div class="hero-badge-row">
+                <span class="hero-type">ALGORITHMIC DSP STUDIO</span>
+                <span class="hero-separator">&bull;</span>
+                <span class="hero-tag">TURN NOISE INTO SONGS</span>
+              </div>
+
               <h1 class="hero-title">THE UNNECESSARY FM</h1>
 
               <p class="hero-tagline">
-                Turns random noise into music.. you record or upload, ta daa... your one minute music is ready!
+                Turns random noise into music! Record or upload any sound — street traffic, loud room chatter, speaking random words, singing, or percussion — ta daa... your song is ready!
               </p>
 
-              <div class="hero-quote">
-                &ldquo;The world is full of perfectly ordinary noises, but for some reason, they aren't songs. We decided this was unacceptable. Unnecessary FM turns ordinary noises into songs. Because apparently, being a noise wasn't enough.&rdquo;
+              <div class="hero-actions-row">
+                <button type="button" class="btn-hero-primary" id="btnHeroUpload">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span>Upload Audio File</span>
+                </button>
+                <button type="button" class="btn-hero-secondary" id="btnHeroRecord">
+                  <span class="record-dot-static"></span>
+                  <span>Record from Mic</span>
+                </button>
+                <a href="#presetsShelf" class="btn-hero-tertiary">Explore Sound Styles &darr;</a>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Quick Noise Inspiration & Genre Shelves -->
-        <section class="shelf-section" id="presetsShelf">
-          <div class="shelf-header">
-            <div class="shelf-title-group">
-              <h2 class="shelf-heading">Popular Noise Sources &amp; Genres</h2>
-              <p class="shelf-subheading">Select a sound style below to instantly preconfigure the procedural generator</p>
-            </div>
-          </div>
-
-          <div class="shelf-grid">
-            <div class="preset-card" data-genre="hiphop" data-energy="balanced">
-              <div class="preset-icon" style="background: linear-gradient(135deg, #e11d48, #be123c);">🎧</div>
-              <div class="preset-info">
-                <h3>Hip Hop</h3>
-                <p>Boom-bap, lo-fi chops &amp; swung rhythm</p>
-              </div>
-              <button type="button" class="btn-card-play" title="Select Hip Hop">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
-              </button>
-            </div>
-
-            <div class="preset-card" data-genre="rap" data-energy="high">
-              <div class="preset-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">🔥</div>
-              <div class="preset-info">
-                <h3>Rap / Trap</h3>
-                <p>808 sub-bass, rolling hats &amp; punchy claps</p>
-              </div>
-              <button type="button" class="btn-card-play" title="Select Rap / Trap">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
-              </button>
-            </div>
-
-            <div class="preset-card" data-genre="pop" data-energy="high">
-              <div class="preset-icon" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">✨</div>
-              <div class="preset-info">
-                <h3>Pop</h3>
-                <p>Punchy 4-on-the-floor, hooks &amp; disco pulse</p>
-              </div>
-              <button type="button" class="btn-card-play" title="Select Pop">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
-              </button>
-            </div>
-
-            <div class="preset-card" data-genre="minimal" data-energy="low">
-              <div class="preset-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">🧩</div>
-              <div class="preset-info">
-                <h3>Minimal</h3>
-                <p>Atmospheric subtle 40-60% groove</p>
-              </div>
-              <button type="button" class="btn-card-play" title="Select Minimal">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
-              </button>
-            </div>
-
-            <div class="preset-card" data-genre="none" data-energy="low">
-              <div class="preset-icon" style="background: linear-gradient(135deg, #10b981, #059669);">🌌</div>
-              <div class="preset-info">
-                <h3>Ambient Drone</h3>
-                <p>No drums, ethereal harmonic resonance</p>
-              </div>
-              <button type="button" class="btn-card-play" title="Select Ambient Drone">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
-              </button>
             </div>
           </div>
         </section>
@@ -255,7 +210,7 @@
         <section class="studio-section" id="studioSection">
           <div class="section-title-row">
             <h2>Creation Studio</h2>
-            <span class="step-indicator">Step 1: Feed Any Sound &bull; Step 2: Shape &bull; Step 3: Listen</span>
+            <span class="step-indicator">Step 1: Upload or Record Sound &bull; Step 2: Choose Style &bull; Step 3: Create Music</span>
           </div>
 
           <div class="studio-cards-row">
@@ -266,7 +221,15 @@
                   <span class="badge-num">1</span>
                   <h3>Source Sound Input</h3>
                 </div>
-                <span class="card-hint">Rain, fan, traffic, keyboard, keys, voice</span>
+                <span class="card-hint">Audible noise gives the best music</span>
+              </div>
+
+              <!-- Audio Input Quality & Volume Notice -->
+              <div class="audio-input-notice">
+                <div class="notice-badge">🔊 SOUND GUIDE &bull; WHAT WORKS BEST</div>
+                <p><strong>Make sure your audio is clearly audible!</strong> The procedural DSP engine extracts pitch, transients, and rhythm from your sound.
+                <br><strong>Great sounds:</strong> Street traffic, loud room chatter, speaking words aloud, singing, clapping, keys, banging pots.
+                <br><em>⚠️ Avoid faint static, silent rooms, faint fan hums, or quiet mouse clicks — if the sound is too low, the music won't have enough signal to build from!</em></p>
               </div>
 
               <!-- Drag & Drop Zone -->
@@ -281,7 +244,7 @@
                     </svg>
                   </div>
                   <p class="drop-prompt"><strong>Drag and drop audio file</strong> or <span class="highlight">browse</span></p>
-                  <span class="file-hint">WAV, MP3, OGG, WEBM, FLAC, M4A up to 50MB</span>
+                  <span class="file-hint">Works best with audible sounds (traffic, chatter, voice, percussion) &bull; WAV, MP3, FLAC, M4A up to 50MB</span>
                 </div>
 
                 <!-- File Info Pill (Shown when file is chosen) -->
@@ -309,7 +272,7 @@
                 <div class="mic-controls">
                   <button type="button" class="btn-pill-mic" id="btnRecord">
                     <span class="record-dot"></span>
-                    <span id="recordBtnText">Record Mic (5–60s)</span>
+                    <span id="recordBtnText">Record Mic (Speak, Clap, or Play Sound)</span>
                   </button>
                   <div class="rec-timer hidden" id="recTimer">
                     <span class="rec-pulse"></span>
@@ -317,6 +280,7 @@
                     <span class="rec-max">/ 01:00 MAX</span>
                   </div>
                 </div>
+                <span class="mic-guidance-hint">💡 Tip: Speak words aloud, sing, clap, or record ambient noise for 5–20s at audible volume</span>
                 <canvas id="liveMicCanvas" class="live-mic-canvas hidden" width="360" height="40"></canvas>
               </div>
             </div>
@@ -336,13 +300,14 @@
                   <label for="beatSelect">Genre &amp; Beat Arrangement</label>
                   <div class="select-wrapper">
                     <select id="beatSelect" class="spotify-select">
-                      <option value="hiphop" selected>🎧 Hip Hop (Boom-Bap, Lo-Fi &amp; Swung Chops)</option>
-                      <option value="rap">🔥 Rap / Trap (808 Sub-Bass, Rolling Hats &amp; Claps)</option>
-                      <option value="pop">✨ Pop (Punchy 4-on-the-Floor, Hooks &amp; Disco Pulse)</option>
-                      <option value="minimal">🧩 Minimal (Atmospheric 40-60% Groove)</option>
-                      <option value="rhythmic">🥁 Rhythmic Pulse (Driving Upbeat)</option>
-                      <option value="light_percussion">🎵 Light Percussion (Organic Foley)</option>
-                      <option value="none">🌌 No Drums (Ambient Harmonic Drone)</option>
+                      <option value="pop" selected>✨ Pop (122 BPM, 4-on-the-Floor, 16th Electro Bass, Foley Chops)</option>
+                      <option value="rap">🔥 Rap / Electro (104 BPM, French-Touch Resonant Sweeps, Funky Bass)</option>
+                      <option value="hiphop">🎧 Hip Hop (92 BPM, Swung MPC Boom-Bap, Lo-Fi Chops)</option>
+                      <option value="trap">⚡ Trap (138 BPM, Triplet Hats, Gliding 808s)</option>
+                      <option value="minimal">🧩 Minimal (126 BPM, Progressive House &amp; Garage Groove)</option>
+                      <option value="rhythmic">🥁 Rhythmic Pulse (120 BPM, Driving Acoustic Energy)</option>
+                      <option value="light_percussion">🎵 Light Percussion (Organic Foley &amp; Natural Textures)</option>
+                      <option value="none">🌌 Ambient (Cinematic Harmonic Drone, No Drums)</option>
                     </select>
                   </div>
                 </div>
@@ -371,20 +336,131 @@
                   </div>
                 </div>
 
+                <!-- Duration Toggle -->
+                <div class="form-group">
+                  <label>Output Duration <span class="hint">(default 30s)</span></label>
+                  <div class="duration-toggle-group" id="durationToggleGroup">
+                    <button type="button" class="btn-duration active" id="btnDur30" data-dur="30">
+                      <span class="dur-label">30s</span>
+                      <span class="dur-sub">Fast — recommended for hosted</span>
+                    </button>
+                    <button type="button" class="btn-duration" id="btnDur60" data-dur="60">
+                      <span class="dur-label">60s</span>
+                      <span class="dur-sub">Full-length track</span>
+                    </button>
+                  </div>
+                </div>
+
                 <!-- Generate CTA Button -->
                 <div class="generate-cta-wrap">
                   <button type="button" class="btn-spotify-generate" id="btnGenerate" disabled>
                     <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
                     </svg>
-                    <span>CREATE MUSIC (~60s)</span>
+                    <span id="generateBtnLabel">CREATE MUSIC (30s)</span>
                   </button>
                   <p class="generate-disclaimer">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                    3 independent candidates synthesized, harmonic-tuned &amp; ranked by DSP
+                    Your noise transformed into music — 100% procedural DSP
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Quick Noise Inspiration & Genre Shelves -->
+        <section class="shelf-section" id="presetsShelf">
+          <div class="shelf-header">
+            <div class="shelf-title-group">
+              <h2 class="shelf-heading">Popular Sound Styles &amp; Presets</h2>
+              <p class="shelf-subheading">Click any style below to quickly configure genre, tempo, and dynamics in the studio above</p>
+            </div>
+          </div>
+
+          <div class="shelf-grid">
+            <div class="preset-card featured-card" data-genre="pop" data-energy="high">
+              <div class="card-top-row">
+                <div class="preset-icon" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">✨</div>
+                <span class="card-badge">DEFAULT</span>
+              </div>
+              <div class="preset-info">
+                <h3>Pop</h3>
+                <p>122 BPM 4-on-the-floor, rolling 16th electro bass, pop claps &amp; syncopated foley chops</p>
+              </div>
+              <button type="button" class="btn-card-play" title="Select Pop">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+              </button>
+            </div>
+
+            <div class="preset-card" data-genre="rap" data-energy="high">
+              <div class="card-top-row">
+                <div class="preset-icon" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">🔥</div>
+                <span class="card-badge">FRENCH TOUCH</span>
+              </div>
+              <div class="preset-info">
+                <h3>Rap / Electro</h3>
+                <p>104 BPM French-touch resonant filter sweeps, funky disco bass &amp; soulful chops</p>
+              </div>
+              <button type="button" class="btn-card-play" title="Select Rap / Electro">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+              </button>
+            </div>
+
+            <div class="preset-card" data-genre="hiphop" data-energy="balanced">
+              <div class="card-top-row">
+                <div class="preset-icon" style="background: linear-gradient(135deg, #e11d48, #be123c);">🎧</div>
+                <span class="card-badge">BOOM-BAP</span>
+              </div>
+              <div class="preset-info">
+                <h3>Hip Hop</h3>
+                <p>92 BPM swung boom-bap, vinyl warmth &amp; chill lo-fi chords</p>
+              </div>
+              <button type="button" class="btn-card-play" title="Select Hip Hop">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+              </button>
+            </div>
+
+            <div class="preset-card" data-genre="trap" data-energy="high">
+              <div class="card-top-row">
+                <div class="preset-icon" style="background: linear-gradient(135deg, #6366f1, #3b82f6);">⚡</div>
+                <span class="card-badge">808 SUB</span>
+              </div>
+              <div class="preset-info">
+                <h3>Trap</h3>
+                <p>138 BPM heavy pitch-bending 808s, triplet hats &amp; dark cinematic pads</p>
+              </div>
+              <button type="button" class="btn-card-play" title="Select Trap">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+              </button>
+            </div>
+
+            <div class="preset-card" data-genre="minimal" data-energy="low">
+              <div class="card-top-row">
+                <div class="preset-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">🧩</div>
+                <span class="card-badge">HOUSE</span>
+              </div>
+              <div class="preset-info">
+                <h3>Minimal</h3>
+                <p>126 BPM progressive house &amp; garage pulse, hypnotic syncopated groove</p>
+              </div>
+              <button type="button" class="btn-card-play" title="Select Minimal">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+              </button>
+            </div>
+
+            <div class="preset-card" data-genre="none" data-energy="low">
+              <div class="card-top-row">
+                <div class="preset-icon" style="background: linear-gradient(135deg, #10b981, #059669);">🌌</div>
+                <span class="card-badge">CINEMATIC</span>
+              </div>
+              <div class="preset-info">
+                <h3>Ambient Drone</h3>
+                <p>Ethereal evolving textures, harmonic drone beds &amp; zero drums</p>
+              </div>
+              <button type="button" class="btn-card-play" title="Select Ambient Drone">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+              </button>
             </div>
           </div>
         </section>
@@ -400,7 +476,7 @@
               </div>
             </div>
             <h3>Awaiting Sound Input</h3>
-            <p>Upload any ordinary noise or record through your mic. The procedural DSP engine will extract pitch, transients, and timbre to compose 3 unique 1-minute songs.</p>
+            <p>Upload any ordinary noise or record through your mic. The procedural DSP engine will extract pitch, transients, and timbre to compose a unique track from your sound.</p>
           </div>
 
           <!-- Processing State with Animated Loader -->
@@ -413,10 +489,26 @@
                 <span class="progress-percent" id="progressPercent">15%</span>
               </div>
               <h3 id="progressStage">Analyzing acoustic DNA &amp; spectral timbre...</h3>
-              <p class="processing-hint">Rendering resonant filter banks, granular clouds &amp; multi-track stems from your audio recording.</p>
+              <p class="processing-quote" id="processingQuote">"The world is full of perfectly ordinary noises, but for some reason, they aren't songs. We decided this was unacceptable."</p>
             </div>
             <div class="progress-bar-track">
               <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+
+            <!-- Authentic Project & Hosting Notice -->
+            <div class="hosting-note-card">
+              <div class="hosting-note-icon">💡</div>
+              <div class="hosting-note-body">
+                <strong>Pure Procedural Synthesis</strong>
+                <p>Turning ordinary noise into music requires real mathematical signal processing (FFT, resonant filters, transient segmentation). It may take a little time on free cloud tiers and that is completely normal!</p>
+                <div class="hosting-note-links">
+                  <span>Full 1-Minute Engine available in the original source:</span>
+                  <a href="https://github.com/nayanapottekkad/useless_project_MiNa" target="_blank" rel="noopener noreferrer" class="github-repo-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    nayanapottekkad/useless_project_MiNa
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -473,9 +565,28 @@
                 <span class="meta-label">DSP SCORE</span>
                 <span class="meta-val score-green" id="metaScore">68.4 / 100</span>
               </div>
-              <div class="meta-card">
+              <div class="meta-card seed-card" title="Click to copy seed to clipboard">
                 <span class="meta-label">SEED</span>
-                <span class="meta-val code-font" id="metaSeed">49201948</span>
+                <span class="meta-val code-font" id="metaSeed" title="Click to copy seed">49201948</span>
+              </div>
+            </div>
+
+            <!-- A/B Synchronized Comparison Bar -->
+            <div class="ab-compare-bar" id="abCompareBar">
+              <div class="ab-status-group">
+                <span class="ab-badge">A/B INSTANT COMPARE</span>
+                <span class="ab-explanation">Toggle or blend between Raw Noise and Produced Track</span>
+              </div>
+              <div class="ab-controls-group">
+                <button type="button" class="btn-ab-switch" id="btnABSwitch" title="Toggle between Raw Noise [A] and Produced Track [B] (Shortcut: Spacebar)">
+                  <span class="ab-switch-indicator" id="abSwitchIndicator">Playing: [B] Produced Track</span>
+                  <span class="ab-hotkey-hint">[Space] to switch</span>
+                </button>
+                <div class="ab-balance-wrap" title="Blend Source Noise [A] and Produced Track [B]">
+                  <span class="balance-tag">Source [A]</span>
+                  <input type="range" id="abBalanceSlider" class="ab-balance-slider" min="0" max="100" value="100" step="1" title="0% = Raw Source Noise, 100% = Produced Track">
+                  <span class="balance-tag">Track [B]</span>
+                </div>
               </div>
             </div>
 
@@ -485,7 +596,7 @@
               <div class="waveform-card source-wave-card">
                 <div class="wf-header">
                   <div class="wf-info">
-                    <span class="wf-tag tag-src">SOURCE AUDIO</span>
+                    <span class="wf-tag tag-src">SOURCE AUDIO [A]</span>
                     <span class="wf-name" id="srcNameDisplay">source_sample.wav</span>
                   </div>
                   <span class="wf-time" id="srcTimeDisplay">00:00 / 00:00</span>
@@ -497,10 +608,21 @@
                 </div>
 
                 <div class="wf-actions">
-                  <button type="button" class="btn-wf-play" id="btnPlaySource">
-                    <span id="srcPlayIcon">&#9658;</span>
-                    <span id="srcPlayText">Play Source</span>
-                  </button>
+                  <div class="action-left">
+                    <button type="button" class="btn-wf-play" id="btnPlaySource">
+                      <span id="srcPlayIcon"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style="display:block;"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
+                      <span id="srcPlayText">Play Source</span>
+                    </button>
+                    <button type="button" class="btn-wf-skip" id="btnSkipBackSource" title="Rewind 5s">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                      -5s
+                    </button>
+                    <button type="button" class="btn-wf-skip" id="btnSkipFwdSource" title="Forward 5s">
+                      +5s
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+                    </button>
+                    <button type="button" class="btn-speed-badge" id="btnSpeedSource" title="Change Playback Speed">1.0x</button>
+                  </div>
                   <span class="wf-hint">Raw acoustic noise input</span>
                 </div>
               </div>
@@ -509,7 +631,7 @@
               <div class="waveform-card result-wave-card">
                 <div class="wf-header">
                   <div class="wf-info">
-                    <span class="wf-tag tag-res">TRANSFORMED COMPOSITION</span>
+                    <span class="wf-tag tag-res">TRANSFORMED COMPOSITION [B]</span>
                     <span class="wf-name" id="resFormDisplay">Intro &rarr; A &rarr; B &rarr; A &rarr; Outro</span>
                   </div>
                   <span class="wf-time" id="resTimeDisplay">00:00 / 01:00</span>
@@ -523,12 +645,20 @@
                 <div class="wf-actions main-res-actions">
                   <div class="action-left">
                     <button type="button" class="btn-wf-play-main" id="btnPlayResult">
-                      <span id="resPlayIcon">&#9658;</span>
+                      <span id="resPlayIcon"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15" style="display:block;"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
                       <span id="resPlayText">Play Composition</span>
                     </button>
+                    <button type="button" class="btn-wf-skip" id="btnSkipBackResult" title="Rewind 5s">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                      -5s
+                    </button>
+                    <button type="button" class="btn-wf-skip" id="btnSkipFwdResult" title="Forward 5s">
+                      +5s
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+                    </button>
                     <a id="btnDownload" class="btn-wf-download" download="unnecessaryfm_composition.wav" href="#" title="Download master uncompressed 16-bit 44.1kHz WAV">
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-                      Download Master WAV
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="display:block;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                      <span>Download WAV</span>
                     </a>
                   </div>
                   <span class="wf-hint">100% Algorithmic procedural transformation</span>
@@ -536,12 +666,73 @@
               </div>
             </div>
 
-            <!-- Action Bar: Variations & DNA Toggle -->
+            <!-- Sound Transformation & Stem Architecture -->
+            <div class="stem-architecture-card">
+              <div class="stem-card-header">
+                <div class="stem-title-group">
+                  <span class="stem-eyebrow">PURE DSP SIGNAL FLOW</span>
+                  <h3>How Your Noise Was Re-engineered Into Music</h3>
+                </div>
+                <span class="stem-pill-badge">100% Pure DSP Signal Processing</span>
+              </div>
+
+              <div class="stem-grid" id="stemGrid">
+                <div class="stem-item">
+                  <div class="stem-icon">🥁</div>
+                  <div class="stem-content">
+                    <span class="stem-name">Punchy Drums &amp; Turnarounds</span>
+                    <p class="stem-desc" id="stemDrumsDesc">Transient slices mapped with pitch-drop envelope into punchy kick, crackling snare &amp; 4th/8th bar fills.</p>
+                  </div>
+                </div>
+
+                <div class="stem-item">
+                  <div class="stem-icon">🎩</div>
+                  <div class="stem-content">
+                    <span class="stem-name">Source Hi-Hats</span>
+                    <p class="stem-desc" id="stemHatsDesc">High-pass spectral slices tailored into crisp 16th-note closed hats &amp; sizzling open hats.</p>
+                  </div>
+                </div>
+
+                <div class="stem-item">
+                  <div class="stem-icon">🎸</div>
+                  <div class="stem-content">
+                    <span class="stem-name">Karplus-Strong Plucked String</span>
+                    <p class="stem-desc" id="stemLeadDesc">Source audio micro-grains physically modeled into resonant plucked string lead hook with ping-pong delay.</p>
+                  </div>
+                </div>
+
+                <div class="stem-item">
+                  <div class="stem-icon">🎹</div>
+                  <div class="stem-content">
+                    <span class="stem-name">Resonant Chord Progression</span>
+                    <p class="stem-desc" id="stemChordsDesc">Dynamic 4-chord modal bandpass resonator bank sweeping across source background texture.</p>
+                  </div>
+                </div>
+
+                <div class="stem-item">
+                  <div class="stem-icon">🌊</div>
+                  <div class="stem-content">
+                    <span class="stem-name">Noise Risers &amp; Drops</span>
+                    <p class="stem-desc" id="stemFXDesc">Source continuous texture dynamically frequency-swept to build anticipation into climax drops.</p>
+                  </div>
+                </div>
+
+                <div class="stem-item">
+                  <div class="stem-icon">🔊</div>
+                  <div class="stem-content">
+                    <span class="stem-name">Harmonic Sub-Bass</span>
+                    <p class="stem-desc" id="stemBassDesc">Source low-end texturized with tuned sub-bass oscillation and warm tape saturation.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Bar: GitHub & DNA Toggle -->
             <div class="results-footer-bar">
-              <button type="button" class="btn-pill-secondary" id="btnRegenerateNew">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                Generate 3 New Variations from this Source
-              </button>
+              <a href="https://github.com/nayanapottekkad/useless_project_MiNa/" target="_blank" rel="noopener noreferrer" class="btn-pill-secondary btn-github-link">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                View Source on GitHub
+              </a>
 
               <button type="button" class="btn-pill-ghost" id="btnScrollToDNA">
                 View Acoustic DNA &amp; Stem Breakdown &rarr;
@@ -549,19 +740,6 @@
             </div>
           </div>
         </section>
-
-        <!-- Footer / Credits -->
-        <footer class="spotify-footer">
-          <div class="footer-left">
-            <p><strong>THE UNNECESSARY FM</strong> &bull; 100% Pure DSP Procedural Music Engine</p>
-            <p class="footer-sub">Zero Neural Networks &bull; Zero Cloud AI &bull; Runs 100% Offline</p>
-          </div>
-          <div class="footer-right">
-            <span>Made with ❤️ at TinkerHub Useless Projects 3.0</span>
-            <span class="footer-dot">&bull;</span>
-            <span>Team MiNa</span>
-          </div>
-        </footer>
 
       </div>
     </main>
@@ -713,8 +891,18 @@
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
 
+        <button type="button" class="btn-player-ctrl btn-player-skip" id="playerBtnSkipBack" title="Rewind 5 Seconds" aria-label="Skip back 5 seconds">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+          <span class="skip-num">5</span>
+        </button>
+
         <button type="button" class="btn-player-play" id="playerBtnPlay" title="Play / Pause" aria-label="Play">
           <svg id="playerPlaySvg" viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+        </button>
+
+        <button type="button" class="btn-player-ctrl btn-player-skip" id="playerBtnSkipFwd" title="Skip Forward 5 Seconds" aria-label="Skip forward 5 seconds">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+          <span class="skip-num">5</span>
         </button>
 
         <button type="button" class="btn-player-ctrl" id="playerBtnNext" title="Next Candidate" aria-label="Next">
@@ -724,6 +912,8 @@
         <button type="button" class="btn-player-ctrl" id="playerBtnLoop" title="Loop Track" aria-label="Loop">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
         </button>
+
+        <button type="button" class="btn-speed-badge player-speed-badge" id="playerBtnSpeed" title="Playback Speed (Click to cycle 0.75x, 1x, 1.25x, 1.5x, 2x)">1.0x</button>
       </div>
 
       <div class="player-progress-row">

@@ -103,6 +103,26 @@
   const resPlayText = document.getElementById('resPlayText');
   const btnDownload = document.getElementById('btnDownload');
 
+  const SVG_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="display:block;"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
+  const SVG_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="display:block;"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+
+  // A/B Studio Comparison & Stem Elements
+  const btnABSwitch = document.getElementById('btnABSwitch');
+  const abSwitchIndicator = document.getElementById('abSwitchIndicator');
+  const abBalanceSlider = document.getElementById('abBalanceSlider');
+  const btnSkipBackSource = document.getElementById('btnSkipBackSource');
+  const btnSkipFwdSource = document.getElementById('btnSkipFwdSource');
+  const btnSpeedSource = document.getElementById('btnSpeedSource');
+  const btnSkipBackResult = document.getElementById('btnSkipBackResult');
+  const btnSkipFwdResult = document.getElementById('btnSkipFwdResult');
+  const btnSpeedResult = document.getElementById('btnSpeedResult');
+  const stemDrumsDesc = document.getElementById('stemDrumsDesc');
+  const stemHatsDesc = document.getElementById('stemHatsDesc');
+  const stemLeadDesc = document.getElementById('stemLeadDesc');
+  const stemChordsDesc = document.getElementById('stemChordsDesc');
+  const stemFXDesc = document.getElementById('stemFXDesc');
+  const stemBassDesc = document.getElementById('stemBassDesc');
+
   // Acoustic DNA Panel Elements
   const catPill = document.getElementById('catPill');
   const meterRhythm = document.getElementById('meterRhythm');
@@ -119,7 +139,10 @@
   const dnaPaletteSlices = document.getElementById('dnaPaletteSlices');
   const dnaClassReason = document.getElementById('dnaClassReason');
   const dnaFormName = document.getElementById('dnaFormName');
-  const btnRegenerateNew = document.getElementById('btnRegenerateNew');
+  // Duration toggle elements
+  const btnDur30 = document.getElementById('btnDur30');
+  const btnDur60 = document.getElementById('btnDur60');
+  const generateBtnLabel = document.getElementById('generateBtnLabel');
 
   // Hidden Audio Players & Notifications
   const sourceAudioPlayer = document.getElementById('sourceAudioPlayer');
@@ -133,10 +156,13 @@
   const btnPlayerFav = document.getElementById('btnPlayerFav');
   const playerBtnShuffle = document.getElementById('playerBtnShuffle');
   const playerBtnPrev = document.getElementById('playerBtnPrev');
+  const playerBtnSkipBack = document.getElementById('playerBtnSkipBack');
   const playerBtnPlay = document.getElementById('playerBtnPlay');
   const playerPlaySvg = document.getElementById('playerPlaySvg');
+  const playerBtnSkipFwd = document.getElementById('playerBtnSkipFwd');
   const playerBtnNext = document.getElementById('playerBtnNext');
   const playerBtnLoop = document.getElementById('playerBtnLoop');
+  const playerBtnSpeed = document.getElementById('playerBtnSpeed');
   const playerCurrentTime = document.getElementById('playerCurrentTime');
   const playerTotalDuration = document.getElementById('playerTotalDuration');
   const playerSliderTrack = document.getElementById('playerSliderTrack');
@@ -183,6 +209,13 @@
   let previousVolume = 0.8;
   let currentVolume = 0.8;
   let activePlayingTarget = 'result'; // 'result' or 'source'
+  let selectedDuration = 30; // 30 or 60 seconds
+  let currentPlaybackRate = 1.0;
+  const PLAYBACK_SPEEDS = [0.75, 1.0, 1.25, 1.5, 2.0];
+  let balanceValue = 100; // 0 = 100% source, 100 = 100% result
+  let isPlayheadRafRunning = false;
+  let isScrubbing = false;
+  let isVolumeDragging = false;
 
   // Set default audio volume
   sourceAudioPlayer.volume = currentVolume;
@@ -289,7 +322,7 @@
     if (playerTrackSubtitle) playerTrackSubtitle.textContent = 'Uploaded Audio • Ready to Compose';
     if (libSourceTitle) libSourceTitle.textContent = file.name;
 
-    showToast(`Loaded "${file.name}". Ready to compose ~60s music!`, 'success', 'AUDIO READY');
+    showToast(`Loaded "${file.name}". Ready to compose 30s music!`, 'success', 'AUDIO READY');
   }
 
   function resetFileInput() {
@@ -432,6 +465,40 @@
     });
   }
 
+  if (metaSeed) {
+    metaSeed.style.cursor = 'pointer';
+    metaSeed.addEventListener('click', () => {
+      const val = metaSeed.textContent.trim();
+      if (val && navigator.clipboard) {
+        navigator.clipboard.writeText(val).then(() => {
+          showToast(`Seed ${val} copied to clipboard!`, 'success', 'SEED COPIED');
+        }).catch(() => {});
+      }
+    });
+  }
+
+  // Hero Quick CTA Buttons
+  const btnHeroUpload = document.getElementById('btnHeroUpload');
+  const btnHeroRecord = document.getElementById('btnHeroRecord');
+
+  if (btnHeroUpload) {
+    btnHeroUpload.addEventListener('click', (e) => {
+      e.preventDefault();
+      const studio = document.getElementById('studioSection');
+      if (studio) studio.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (audioFileInput) audioFileInput.click();
+    });
+  }
+
+  if (btnHeroRecord) {
+    btnHeroRecord.addEventListener('click', (e) => {
+      e.preventDefault();
+      const studio = document.getElementById('studioSection');
+      if (studio) studio.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (btnRecord && !isRecording) btnRecord.click();
+    });
+  }
+
   // 4. Quick Preset Shelves
   document.querySelectorAll('.preset-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -509,12 +576,21 @@
     });
   }
 
-  if (btnRegenerateNew) {
-    btnRegenerateNew.addEventListener('click', () => {
-      if (seedInput) {
-        seedInput.value = Math.floor(Math.random() * 9000000000) + 1000000000;
-      }
-      submitMusicGeneration();
+  // Duration toggle
+  if (btnDur30) {
+    btnDur30.addEventListener('click', () => {
+      selectedDuration = 30;
+      btnDur30.classList.add('active');
+      if (btnDur60) btnDur60.classList.remove('active');
+      if (generateBtnLabel) generateBtnLabel.textContent = 'CREATE MUSIC (30s)';
+    });
+  }
+  if (btnDur60) {
+    btnDur60.addEventListener('click', () => {
+      selectedDuration = 60;
+      btnDur60.classList.add('active');
+      if (btnDur30) btnDur30.classList.remove('active');
+      if (generateBtnLabel) generateBtnLabel.textContent = 'CREATE MUSIC (60s)';
     });
   }
 
@@ -530,8 +606,9 @@
       formData.append('existing_job_id', currentJobId);
     }
 
-    formData.append('beat_preference', beatSelect ? beatSelect.value : 'hiphop');
+    formData.append('beat_preference', beatSelect ? beatSelect.value : 'pop');
     formData.append('energy_preference', energySelect ? energySelect.value : 'balanced');
+    formData.append('duration_seconds', String(selectedDuration));
     if (seedInput && seedInput.value.trim()) {
       formData.append('seed', seedInput.value.trim());
     }
@@ -549,7 +626,8 @@
 
       const data = await response.json();
       currentJobId = data.job_id;
-      pollJobStatus(currentJobId);
+      sessionStorage.setItem('unnecessary_fm_active_job', currentJobId);
+      trackJobProgress(currentJobId);
 
     } catch (err) {
       showToast(err.message, 'error', 'COMPOSITION FAILED');
@@ -561,8 +639,8 @@
     if (emptyState) emptyState.classList.add('hidden');
     if (resultsDisplay) resultsDisplay.classList.add('hidden');
     if (processingState) processingState.classList.remove('hidden');
-    if (progressPercent) progressPercent.textContent = '10%';
-    if (progressBarFill) progressBarFill.style.width = '10%';
+    if (progressPercent) progressPercent.textContent = '15%';
+    if (progressBarFill) progressBarFill.style.width = '15%';
     if (progressStage) progressStage.textContent = stageText || 'Processing...';
     if (btnGenerate) btnGenerate.disabled = true;
 
@@ -576,59 +654,177 @@
     if (btnGenerate) btnGenerate.disabled = false;
   }
 
-  // 6. Job Status Polling
-  function pollJobStatus(jobId) {
+  // 6. Real-Time Job Progress Tracking (SSE + Fallback Polling + Background Tab Sync)
+  // Authentic project quotes from README.md
+  const README_QUOTES = [
+    `"The world is full of perfectly ordinary noises, but for some reason, they aren't songs. We decided this was unacceptable."`,
+    `"Unnecessary FM turns ordinary noises into songs. Because apparently, being a noise wasn't enough."`,
+    `"Extracting frequency, rhythm, pitch & texture → dividing into impacts, pulses, movements & drones."`,
+    `"Synthesizing the composition, scoring dynamic range & spectral balance, and mastering the winner."`
+  ];
+
+  let activeEventSource = null;
+  let activePollInterval = null;
+  let activeQuoteInterval = null;
+
+  function cleanupJobTracking() {
+    if (activeEventSource) {
+      activeEventSource.close();
+      activeEventSource = null;
+    }
+    if (activePollInterval) {
+      clearInterval(activePollInterval);
+      activePollInterval = null;
+    }
+    if (activeQuoteInterval) {
+      clearInterval(activeQuoteInterval);
+      activeQuoteInterval = null;
+    }
+  }
+
+  function trackJobProgress(jobId) {
+    cleanupJobTracking();
+
+    const processingQuoteEl = document.getElementById('processingQuote');
+    let quoteIdx = 0;
+    activeQuoteInterval = setInterval(() => {
+      if (!processingQuoteEl) return;
+      quoteIdx = (quoteIdx + 1) % README_QUOTES.length;
+      processingQuoteEl.style.opacity = '0';
+      setTimeout(() => {
+        if (processingQuoteEl) {
+          processingQuoteEl.textContent = README_QUOTES[quoteIdx];
+          processingQuoteEl.style.opacity = '1';
+        }
+      }, 300);
+    }, 4500);
+
+    const applyProgressUpdate = (data) => {
+      if (!data) return;
+      const pct = Math.max(10, Math.min(100, Math.round(data.progress || 10)));
+      if (progressPercent) progressPercent.textContent = `${pct}%`;
+      if (progressBarFill) progressBarFill.style.width = `${pct}%`;
+      if (progressStage && data.stage) {
+        progressStage.textContent = data.stage;
+      }
+
+      if (data.status === 'completed') {
+        cleanupJobTracking();
+        sessionStorage.removeItem('unnecessary_fm_active_job');
+        if (progressPercent) progressPercent.textContent = '100%';
+        if (progressBarFill) progressBarFill.style.width = '100%';
+        loadFinalResults(jobId, true);
+      } else if (data.status === 'failed') {
+        cleanupJobTracking();
+        sessionStorage.removeItem('unnecessary_fm_active_job');
+        showToast(data.error || 'DSP synthesis error', 'error', 'SYNTHESIS ERROR');
+        hideProcessingState();
+      }
+    };
+
+    // 1. Try Server-Sent Events (SSE) first for instant real-time pushes
+    if (typeof EventSource !== 'undefined') {
+      try {
+        const sseUrl = buildUrl(`/api/progress/${jobId}`);
+        activeEventSource = new EventSource(sseUrl);
+
+        activeEventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            applyProgressUpdate(data);
+          } catch (e) {
+            console.error("SSE parse error", e);
+          }
+        };
+
+        activeEventSource.onerror = () => {
+          // If SSE connection drops or is blocked, seamlessly fallback to polling
+          if (activeEventSource) {
+            activeEventSource.close();
+            activeEventSource = null;
+          }
+          if (!activePollInterval) {
+            startPollingFallback(jobId, applyProgressUpdate);
+          }
+        };
+      } catch (e) {
+        startPollingFallback(jobId, applyProgressUpdate);
+      }
+    } else {
+      startPollingFallback(jobId, applyProgressUpdate);
+    }
+  }
+
+  function startPollingFallback(jobId, applyProgressUpdate) {
+    if (activePollInterval) return;
     let failCount = 0;
-    const pollInterval = setInterval(async () => {
+    activePollInterval = setInterval(async () => {
       try {
         const res = await fetch(buildUrl(`/api/status/${jobId}`));
         if (!res.ok) {
           failCount++;
-          if (failCount >= 8) {
-            clearInterval(pollInterval);
-            showToast('Service temporarily unavailable or restarted. Please try generating again.', 'error', 'CONNECTION ERROR');
+          if (failCount >= 10) {
+            cleanupJobTracking();
+            sessionStorage.removeItem('unnecessary_fm_active_job');
+            showToast('Service temporarily unavailable. Please try generating again.', 'error', 'CONNECTION ERROR');
             hideProcessingState();
           }
           return;
         }
         failCount = 0;
-
         const statusData = await res.json();
-        const pct = Math.max(10, statusData.progress || 10);
-        if (progressPercent) progressPercent.textContent = `${pct}%`;
-        if (progressBarFill) progressBarFill.style.width = `${pct}%`;
-        if (progressStage) progressStage.textContent = statusData.stage || 'Synthesizing audio...';
-
-        if (statusData.status === 'completed') {
-          clearInterval(pollInterval);
-          loadFinalResults(jobId);
-        } else if (statusData.status === 'failed') {
-          clearInterval(pollInterval);
-          showToast(statusData.error || 'DSP synthesis error', 'error', 'SYNTHESIS ERROR');
-          hideProcessingState();
-        }
-      } catch (e) {
+        applyProgressUpdate(statusData);
+      } catch (err) {
         failCount++;
-        console.error("Polling error:", e);
-        if (failCount >= 8) {
-          clearInterval(pollInterval);
+        if (failCount >= 10) {
+          cleanupJobTracking();
+          sessionStorage.removeItem('unnecessary_fm_active_job');
           showToast('Connection interrupted. Please try again.', 'error', 'NETWORK ERROR');
           hideProcessingState();
         }
       }
-    }, 800);
+    }, 1000);
   }
 
+  // Handle Tab Switch / Backgrounding: Instantly sync latest status when user switches back to tab
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && currentJobId && !currentResultData) {
+      try {
+        const res = await fetch(buildUrl(`/api/status/${currentJobId}`));
+        if (res.ok) {
+          const statusData = await res.json();
+          const pct = Math.max(10, Math.min(100, Math.round(statusData.progress || 10)));
+          if (progressPercent) progressPercent.textContent = `${pct}%`;
+          if (progressBarFill) progressBarFill.style.width = `${pct}%`;
+          if (progressStage && statusData.stage) progressStage.textContent = statusData.stage;
+          if (statusData.status === 'completed') {
+            cleanupJobTracking();
+            sessionStorage.removeItem('unnecessary_fm_active_job');
+            loadFinalResults(currentJobId, true);
+          } else if (statusData.status === 'failed') {
+            cleanupJobTracking();
+            sessionStorage.removeItem('unnecessary_fm_active_job');
+            showToast(statusData.error || 'DSP synthesis error', 'error', 'SYNTHESIS ERROR');
+            hideProcessingState();
+          }
+        }
+      } catch (e) {}
+    }
+  });
+
   // 7. Load & Render Results
-  async function loadFinalResults(jobId) {
+  async function loadFinalResults(jobId, isNewGeneration = false) {
     try {
       const res = await fetch(buildUrl(`/api/result/${jobId}`));
       if (!res.ok) throw new Error('Failed to retrieve result');
 
       currentResultData = await res.json();
       renderCompositionUI(currentResultData);
-      const candCount = (currentResultData.candidates && currentResultData.candidates.length) || 2;
-      showToast(`1-minute music composition synthesized across ${candCount} candidates!`, 'success', 'TA DAA!');
+      if (isNewGeneration) {
+        const candCount = (currentResultData.candidates && currentResultData.candidates.length) || 1;
+        const dur = (currentResultData.source && currentResultData.source.duration) ? Math.round(currentResultData.source.duration) : 30;
+        showToast(`${dur}-second music composition synthesized across ${candCount} candidate${candCount > 1 ? 's' : ''}!`, 'success', 'TA DAA!');
+      }
 
     } catch (err) {
       showToast(err.message, 'error', 'LOAD ERROR');
@@ -708,11 +904,12 @@
 
     // Update Banner
     if (metaGenre) {
-      const pref = (currentResultData.settings && currentResultData.settings.beat_preference) || (beatSelect ? beatSelect.value : 'hiphop');
+      const pref = (currentResultData.settings && currentResultData.settings.beat_preference) || (beatSelect ? beatSelect.value : 'pop');
       const genreLabels = {
-        'hiphop': 'Hip Hop',
-        'rap': 'Rap / Trap',
         'pop': 'Pop',
+        'rap': 'Rap / Electro',
+        'hiphop': 'Hip Hop',
+        'trap': 'Trap',
         'minimal': 'Minimal',
         'rhythmic': 'Rhythmic Pulse',
         'light_percussion': 'Light Percussion',
@@ -743,6 +940,17 @@
       dnaPaletteSlices.textContent = `${tot} slices (${pal.impacts || 0} impacts, ${pal.pulses || 0} pulses, ${pal.movements || 0} movements, ${pal.ambience || 0} beds)`;
     }
 
+    // Update Stem Architecture Breakdown Cards
+    const stems = cand.stems || {};
+    if (stemDrumsDesc && stems.Drums) stemDrumsDesc.textContent = stems.Drums;
+    if (stemHatsDesc && stems.HiHats) stemHatsDesc.textContent = stems.HiHats;
+    if (stemLeadDesc && stems.Melody) stemLeadDesc.textContent = stems.Melody;
+    if (stemChordsDesc && stems.Chords) stemChordsDesc.textContent = stems.Chords;
+    if (stemFXDesc && stems.Accents) stemFXDesc.textContent = stems.Accents;
+    if (stemBassDesc && stems.Bass) stemBassDesc.textContent = stems.Bass;
+
+    updateABUI('result');
+
     // Set Audio Player
     const candUrl = buildUrl(cand.audio_url);
     resultAudioPlayer.src = candUrl;
@@ -771,7 +979,60 @@
     drawWaveformFromUrl(candUrl, resWaveformCanvas, '#1ed760');
   }
 
-  // 8. Audio Playback & Interactive Waveform Scrubbing
+  // 8. Audio Playback Engine & 60fps RAF Synchronization
+  function getActiveAudioPlayer() {
+    return (activePlayingTarget === 'source') ? sourceAudioPlayer : resultAudioPlayer;
+  }
+
+  function startPlayheadRAF() {
+    if (!isPlayheadRafRunning) {
+      isPlayheadRafRunning = true;
+      rafId = requestAnimationFrame(updatePlayheadRAF);
+    }
+  }
+
+  function stopPlayheadRAF() {
+    isPlayheadRafRunning = false;
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
+  function updatePlayheadRAF() {
+    if (!isPlayheadRafRunning) return;
+
+    const p = getActiveAudioPlayer();
+    const cur = p.currentTime || 0;
+    const dur = p.duration || 30;
+    const pct = dur > 0 ? Math.max(0, Math.min(100, (cur / dur) * 100)) : 0;
+
+    if (!isScrubbing) {
+      if (playerSliderFill) playerSliderFill.style.width = `${pct}%`;
+      if (playerSliderThumb) playerSliderThumb.style.left = `${pct}%`;
+      if (playerCurrentTime) playerCurrentTime.textContent = formatTime(cur);
+      if (playerTotalDuration) playerTotalDuration.textContent = formatTime(dur);
+
+      if (activePlayingTarget === 'result') {
+        if (resPlayhead) resPlayhead.style.left = `${pct}%`;
+        if (resTimeDisplay) resTimeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+      } else {
+        if (srcPlayhead) srcPlayhead.style.left = `${pct}%`;
+        if (srcTimeDisplay) srcTimeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+      }
+    }
+
+    if (!sourceAudioPlayer.paused || !resultAudioPlayer.paused) {
+      rafId = requestAnimationFrame(updatePlayheadRAF);
+    } else {
+      isPlayheadRafRunning = false;
+      rafId = null;
+    }
+  }
+
+  sourceAudioPlayer.addEventListener('play', startPlayheadRAF);
+  resultAudioPlayer.addEventListener('play', startPlayheadRAF);
+
   if (btnPlaySource) {
     btnPlaySource.addEventListener('click', () => {
       toggleSourcePlayback();
@@ -795,13 +1056,146 @@
     });
   }
 
+  function updateABUI(target) {
+    if (!abSwitchIndicator || !btnABSwitch) return;
+    if (target === 'source') {
+      abSwitchIndicator.textContent = 'Playing: [A] Raw Source Noise';
+      btnABSwitch.className = 'btn-ab-switch playing-source';
+      if (abBalanceSlider) abBalanceSlider.value = 0;
+    } else {
+      abSwitchIndicator.textContent = 'Playing: [B] Produced Track';
+      btnABSwitch.className = 'btn-ab-switch playing-result';
+      if (abBalanceSlider) abBalanceSlider.value = 100;
+    }
+  }
+
+  // Click-free Micro-fade A/B Transition
+  function toggleABComparison() {
+    if (!sourceAudioPlayer.src || !resultAudioPlayer.src) {
+      showToast('Generate or select a composition first to compare A/B!', 'info');
+      return;
+    }
+
+    if (activePlayingTarget === 'result') {
+      crossfadeToTarget('source');
+    } else {
+      crossfadeToTarget('result');
+    }
+  }
+
+  function crossfadeToTarget(target) {
+    const fromPlayer = (target === 'source') ? resultAudioPlayer : sourceAudioPlayer;
+    const toPlayer = (target === 'source') ? sourceAudioPlayer : resultAudioPlayer;
+    const wasPlaying = !fromPlayer.paused;
+    const curTime = fromPlayer.currentTime;
+
+    activePlayingTarget = target;
+    updateABUI(target);
+
+    // Micro volume ramp-down to prevent any digital clicking
+    const rampSteps = 4;
+    let step = 0;
+    const origVol = currentVolume;
+    const rampDownInterval = setInterval(() => {
+      step++;
+      const ratio = Math.max(0, 1 - (step / rampSteps));
+      fromPlayer.volume = origVol * ratio;
+      if (step >= rampSteps) {
+        clearInterval(rampDownInterval);
+        fromPlayer.pause();
+        fromPlayer.volume = origVol;
+        if (fromPlayer === resultAudioPlayer) resetResultPlayState();
+        else {
+          if (srcPlayIcon) srcPlayIcon.innerHTML = SVG_PLAY;
+          if (srcPlayText) srcPlayText.textContent = 'Play Source';
+        }
+
+        // Align playback position
+        const targetDur = toPlayer.duration || curTime;
+        toPlayer.currentTime = Math.min(curTime, targetDur);
+        toPlayer.playbackRate = currentPlaybackRate;
+
+        if (wasPlaying) {
+          toPlayer.volume = 0;
+          toPlayer.play().then(() => {
+            updatePlayIcons(true, target);
+            startPlayheadRAF();
+            let upStep = 0;
+            const rampUpInterval = setInterval(() => {
+              upStep++;
+              toPlayer.volume = origVol * (upStep / rampSteps);
+              if (upStep >= rampSteps) {
+                clearInterval(rampUpInterval);
+                toPlayer.volume = origVol;
+              }
+            }, 5);
+          }).catch(() => {});
+        }
+      }
+    }, 5);
+
+    showToast(target === 'source' ? 'Switched to [A] Raw Source Noise' : 'Switched to [B] Produced Track', 'info', 'A/B STUDIO COMPARE');
+  }
+
+  if (btnABSwitch) {
+    btnABSwitch.addEventListener('click', toggleABComparison);
+  }
+
+  // Real-Time Sound Balance Slider (Blends between Source and Mastered Track)
+  if (abBalanceSlider) {
+    abBalanceSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      balanceValue = val;
+      applyBalance(val);
+    });
+  }
+
+  function applyBalance(val) {
+    const srcGain = currentVolume * (1 - (val / 100));
+    const resGain = currentVolume * (val / 100);
+    sourceAudioPlayer.volume = srcGain;
+    resultAudioPlayer.volume = resGain;
+
+    // If both volumes are active (> 0), synchronize both players in parallel
+    if (val > 0 && val < 100) {
+      if (!sourceAudioPlayer.paused && resultAudioPlayer.paused) {
+        resultAudioPlayer.currentTime = sourceAudioPlayer.currentTime;
+        resultAudioPlayer.play().catch(() => {});
+      } else if (!resultAudioPlayer.paused && sourceAudioPlayer.paused) {
+        sourceAudioPlayer.currentTime = resultAudioPlayer.currentTime;
+        sourceAudioPlayer.play().catch(() => {});
+      }
+    } else if (val === 0) {
+      activePlayingTarget = 'source';
+      updateABUI('source');
+      if (!resultAudioPlayer.paused) resultAudioPlayer.pause();
+    } else if (val === 100) {
+      activePlayingTarget = 'result';
+      updateABUI('result');
+      if (!sourceAudioPlayer.paused) sourceAudioPlayer.pause();
+    }
+  }
+
+  // Keyboard shortcut: Spacebar toggles A/B when in results mode and not typing
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
+      if (resultsDisplay && !resultsDisplay.classList.contains('hidden') && sourceAudioPlayer.src && resultAudioPlayer.src) {
+        e.preventDefault();
+        toggleABComparison();
+      }
+    }
+  });
+
   function toggleSourcePlayback() {
     activePlayingTarget = 'source';
+    updateABUI('source');
     if (sourceAudioPlayer.paused) {
       resultAudioPlayer.pause();
       resetResultPlayState();
-      sourceAudioPlayer.play();
+      sourceAudioPlayer.playbackRate = currentPlaybackRate;
+      sourceAudioPlayer.play().catch(() => {});
       updatePlayIcons(true, 'source');
+      startPlayheadRAF();
     } else {
       sourceAudioPlayer.pause();
       updatePlayIcons(false, 'source');
@@ -810,13 +1204,16 @@
 
   function toggleResultPlayback() {
     activePlayingTarget = 'result';
+    updateABUI('result');
     if (resultAudioPlayer.paused) {
       sourceAudioPlayer.pause();
-      if (srcPlayIcon) srcPlayIcon.innerHTML = '&#9658;';
+      if (srcPlayIcon) srcPlayIcon.innerHTML = SVG_PLAY;
       if (srcPlayText) srcPlayText.textContent = 'Play Source';
 
-      resultAudioPlayer.play();
+      resultAudioPlayer.playbackRate = currentPlaybackRate;
+      resultAudioPlayer.play().catch(() => {});
       updatePlayIcons(true, 'result');
+      startPlayheadRAF();
     } else {
       resultAudioPlayer.pause();
       updatePlayIcons(false, 'result');
@@ -826,10 +1223,10 @@
   function updatePlayIcons(isPlaying, target) {
     if (isPlaying) {
       if (target === 'result') {
-        if (resPlayIcon) resPlayIcon.innerHTML = '&#9646;&#9646;';
+        if (resPlayIcon) resPlayIcon.innerHTML = SVG_PAUSE;
         if (resPlayText) resPlayText.textContent = 'Pause Composition';
       } else {
-        if (srcPlayIcon) srcPlayIcon.innerHTML = '&#9646;&#9646;';
+        if (srcPlayIcon) srcPlayIcon.innerHTML = SVG_PAUSE;
         if (srcPlayText) srcPlayText.textContent = 'Pause Source';
       }
       if (playerPlaySvg) {
@@ -837,10 +1234,10 @@
       }
     } else {
       if (target === 'result') {
-        if (resPlayIcon) resPlayIcon.innerHTML = '&#9658;';
+        if (resPlayIcon) resPlayIcon.innerHTML = SVG_PLAY;
         if (resPlayText) resPlayText.textContent = 'Play Composition';
       } else {
-        if (srcPlayIcon) srcPlayIcon.innerHTML = '&#9658;';
+        if (srcPlayIcon) srcPlayIcon.innerHTML = SVG_PLAY;
         if (srcPlayText) srcPlayText.textContent = 'Play Source';
       }
       if (playerPlaySvg) {
@@ -849,54 +1246,75 @@
     }
   }
 
-  // Source Audio Progress Sync
-  sourceAudioPlayer.addEventListener('timeupdate', () => {
-    if (activePlayingTarget !== 'source') return;
-    const cur = sourceAudioPlayer.currentTime;
-    const dur = sourceAudioPlayer.duration || 1;
-    if (srcTimeDisplay) srcTimeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
-    if (playerCurrentTime) playerCurrentTime.textContent = formatTime(cur);
-    if (playerTotalDuration) playerTotalDuration.textContent = formatTime(dur);
+  // Playback Speed Cycling Control (0.75x, 1x, 1.25x, 1.5x, 2x)
+  function cyclePlaybackSpeed() {
+    const curIdx = PLAYBACK_SPEEDS.indexOf(currentPlaybackRate);
+    const nextIdx = (curIdx + 1) % PLAYBACK_SPEEDS.length;
+    currentPlaybackRate = PLAYBACK_SPEEDS[nextIdx];
 
-    const pct = (cur / dur) * 100;
-    if (srcPlayhead) srcPlayhead.style.left = `${pct}%`;
-    if (playerSliderFill) playerSliderFill.style.width = `${pct}%`;
-    if (playerSliderThumb) playerSliderThumb.style.left = `${pct}%`;
+    sourceAudioPlayer.playbackRate = currentPlaybackRate;
+    resultAudioPlayer.playbackRate = currentPlaybackRate;
+
+    const label = `${currentPlaybackRate}x`;
+    if (playerBtnSpeed) playerBtnSpeed.textContent = label;
+    if (btnSpeedSource) btnSpeedSource.textContent = label;
+    if (btnSpeedResult) btnSpeedResult.textContent = label;
+
+    showToast(`Playback speed: ${label}`, 'info', 'SPEED');
+  }
+
+  [playerBtnSpeed, btnSpeedSource, btnSpeedResult].forEach(btn => {
+    if (btn) btn.addEventListener('click', cyclePlaybackSpeed);
   });
 
+  // Relative Time Skipping (-5s / +5s)
+  function skipTime(deltaSeconds) {
+    const p = getActiveAudioPlayer();
+    const cur = p.currentTime || 0;
+    const dur = p.duration || 60;
+    const target = Math.max(0, Math.min(dur, cur + deltaSeconds));
+    p.currentTime = target;
+
+    // Sync other player if both are active in balance mode
+    if (balanceValue > 0 && balanceValue < 100) {
+      const other = (p === sourceAudioPlayer) ? resultAudioPlayer : sourceAudioPlayer;
+      other.currentTime = target;
+    }
+
+    updatePlayheadRAF();
+    showToast(`${deltaSeconds > 0 ? '+' : ''}${deltaSeconds}s`, 'info', 'SEEK');
+  }
+
+  if (playerBtnSkipBack) playerBtnSkipBack.addEventListener('click', () => skipTime(-5));
+  if (playerBtnSkipFwd) playerBtnSkipFwd.addEventListener('click', () => skipTime(5));
+  if (btnSkipBackSource) btnSkipBackSource.addEventListener('click', () => skipTime(-5));
+  if (btnSkipFwdSource) btnSkipFwdSource.addEventListener('click', () => skipTime(5));
+  if (btnSkipBackResult) btnSkipBackResult.addEventListener('click', () => skipTime(-5));
+  if (btnSkipFwdResult) btnSkipFwdResult.addEventListener('click', () => skipTime(5));
+
+  // Audio Ended Listeners
   sourceAudioPlayer.addEventListener('ended', () => {
-    if (srcPlayIcon) srcPlayIcon.innerHTML = '&#9658;';
+    if (srcPlayIcon) srcPlayIcon.innerHTML = SVG_PLAY;
     if (srcPlayText) srcPlayText.textContent = 'Play Source';
     if (srcPlayhead) srcPlayhead.style.left = '0%';
     updatePlayIcons(false, 'source');
-  });
-
-  // Result Audio Progress Sync
-  resultAudioPlayer.addEventListener('timeupdate', () => {
-    if (activePlayingTarget !== 'result') return;
-    const cur = resultAudioPlayer.currentTime;
-    const dur = resultAudioPlayer.duration || 60;
-    if (resTimeDisplay) resTimeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
-    if (playerCurrentTime) playerCurrentTime.textContent = formatTime(cur);
-    if (playerTotalDuration) playerTotalDuration.textContent = formatTime(dur);
-
-    const pct = (cur / dur) * 100;
-    if (resPlayhead) resPlayhead.style.left = `${pct}%`;
-    if (playerSliderFill) playerSliderFill.style.width = `${pct}%`;
-    if (playerSliderThumb) playerSliderThumb.style.left = `${pct}%`;
+    stopPlayheadRAF();
   });
 
   resultAudioPlayer.addEventListener('ended', () => {
     resetResultPlayState();
     if (isLooping) {
       resultAudioPlayer.currentTime = 0;
-      resultAudioPlayer.play();
+      resultAudioPlayer.play().catch(() => {});
       updatePlayIcons(true, 'result');
+      startPlayheadRAF();
+    } else {
+      stopPlayheadRAF();
     }
   });
 
   function resetResultPlayState() {
-    if (resPlayIcon) resPlayIcon.innerHTML = '&#9658;';
+    if (resPlayIcon) resPlayIcon.innerHTML = SVG_PLAY;
     if (resPlayText) resPlayText.textContent = 'Play Composition';
     if (resPlayhead) resPlayhead.style.left = '0%';
     if (playerPlaySvg) {
@@ -906,13 +1324,14 @@
     if (playerSliderThumb) playerSliderThumb.style.left = '0%';
   }
 
-  // Scrubber Seeking on Waveform Canvases
+  // Waveform Click-to-Scrub Seeking
   if (srcCanvasWrapper) {
     srcCanvasWrapper.addEventListener('click', (e) => {
       const rect = srcCanvasWrapper.getBoundingClientRect();
-      const pos = (e.clientX - rect.left) / rect.width;
+      const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       if (sourceAudioPlayer.duration) {
         sourceAudioPlayer.currentTime = pos * sourceAudioPlayer.duration;
+        updatePlayheadRAF();
       }
     });
   }
@@ -920,22 +1339,51 @@
   if (resCanvasWrapper) {
     resCanvasWrapper.addEventListener('click', (e) => {
       const rect = resCanvasWrapper.getBoundingClientRect();
-      const pos = (e.clientX - rect.left) / rect.width;
+      const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       if (resultAudioPlayer.duration) {
         resultAudioPlayer.currentTime = pos * resultAudioPlayer.duration;
+        updatePlayheadRAF();
       }
     });
   }
 
-  // Bottom Player Scrubber Bar Drag & Click
+  // Pointer Drag-to-Scrub on Player Progress Bar
   if (playerSliderTrack) {
-    playerSliderTrack.addEventListener('click', (e) => {
+    const handleScrubSeek = (e) => {
       const rect = playerSliderTrack.getBoundingClientRect();
       const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const activePlayer = (activePlayingTarget === 'source') ? sourceAudioPlayer : resultAudioPlayer;
-      if (activePlayer.duration) {
-        activePlayer.currentTime = pos * activePlayer.duration;
+      const p = getActiveAudioPlayer();
+      if (p.duration) {
+        p.currentTime = pos * p.duration;
+        if (balanceValue > 0 && balanceValue < 100) {
+          const other = (p === sourceAudioPlayer) ? resultAudioPlayer : sourceAudioPlayer;
+          other.currentTime = p.currentTime;
+        }
       }
+      if (playerSliderFill) playerSliderFill.style.width = `${pos * 100}%`;
+      if (playerSliderThumb) playerSliderThumb.style.left = `${pos * 100}%`;
+    };
+
+    playerSliderTrack.addEventListener('pointerdown', (e) => {
+      isScrubbing = true;
+      playerSliderTrack.setPointerCapture(e.pointerId);
+      handleScrubSeek(e);
+    });
+
+    playerSliderTrack.addEventListener('pointermove', (e) => {
+      if (isScrubbing) handleScrubSeek(e);
+    });
+
+    playerSliderTrack.addEventListener('pointerup', (e) => {
+      if (isScrubbing) {
+        isScrubbing = false;
+        try { playerSliderTrack.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+    });
+
+    playerSliderTrack.addEventListener('pointercancel', (e) => {
+      isScrubbing = false;
+      try { playerSliderTrack.releasePointerCapture(e.pointerId); } catch (err) {}
     });
   }
 
@@ -988,12 +1436,34 @@
     });
   }
 
-  // Volume Control
+  // Smooth Pointer Drag-to-Adjust Volume
   if (volumeSliderTrack) {
-    volumeSliderTrack.addEventListener('click', (e) => {
+    const handleVolumeSeek = (e) => {
       const rect = volumeSliderTrack.getBoundingClientRect();
       const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       setVolume(pos);
+    };
+
+    volumeSliderTrack.addEventListener('pointerdown', (e) => {
+      isVolumeDragging = true;
+      volumeSliderTrack.setPointerCapture(e.pointerId);
+      handleVolumeSeek(e);
+    });
+
+    volumeSliderTrack.addEventListener('pointermove', (e) => {
+      if (isVolumeDragging) handleVolumeSeek(e);
+    });
+
+    volumeSliderTrack.addEventListener('pointerup', (e) => {
+      if (isVolumeDragging) {
+        isVolumeDragging = false;
+        try { volumeSliderTrack.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+    });
+
+    volumeSliderTrack.addEventListener('pointercancel', (e) => {
+      isVolumeDragging = false;
+      try { volumeSliderTrack.releasePointerCapture(e.pointerId); } catch (err) {}
     });
   }
 
@@ -1012,8 +1482,7 @@
 
   function setVolume(val) {
     currentVolume = val;
-    sourceAudioPlayer.volume = val;
-    resultAudioPlayer.volume = val;
+    applyBalance(balanceValue);
     if (volumeSliderFill) volumeSliderFill.style.width = `${val * 100}%`;
 
     if (val === 0) {
@@ -1077,61 +1546,109 @@
 
   function drawWaveform(samples, canvas, color) {
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || (canvas.width / dpr) || 800;
+    const height = rect.height || (canvas.height / dpr) || 80;
 
-    // Dark sleek canvas backdrop
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.scale(dpr, dpr);
+
+    // Clean dark backdrop
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#0a0a0a';
+    ctx.fillStyle = '#0a0d12';
     ctx.fillRect(0, 0, width, height);
 
-    // Center subtle guideline
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    // Subtle horizontal guideline
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
     ctx.fillRect(0, Math.floor(height / 2), width, 1);
 
-    const numBars = 160;
+    const numBars = Math.min(140, Math.max(80, Math.floor(width / 6)));
     const step = Math.floor(samples.length / numBars);
-    const barWidth = Math.max(2, Math.floor((width / numBars) * 0.75));
+    const barWidth = Math.max(2.5, (width / numBars) * 0.65);
+    const spacing = width / numBars;
 
-    ctx.fillStyle = color || '#1ed760';
+    // 1. Calculate raw RMS and peak for each bin
+    const rawHeights = [];
+    for (let i = 0; i < numBars; i++) {
+      let sumSq = 0;
+      let peak = 0;
+      const start = i * step;
+      const stepInc = Math.max(1, Math.floor(step / 32));
+      let count = 0;
+      for (let j = 0; j < step; j += stepInc) {
+        const val = Math.abs(samples[start + j] || 0);
+        sumSq += val * val;
+        if (val > peak) peak = val;
+        count++;
+      }
+      const rms = count > 0 ? Math.sqrt(sumSq / count) : 0;
+      // Balanced weighting of RMS body and transient peak
+      const combined = (rms * 0.6) + (peak * 0.4);
+      rawHeights.push(combined);
+    }
+
+    // 2. Smooth envelope filter (3-point moving average) to prevent jagged jumps
+    const smoothed = [];
+    for (let i = 0; i < numBars; i++) {
+      const prev = rawHeights[Math.max(0, i - 1)];
+      const curr = rawHeights[i];
+      const next = rawHeights[Math.min(numBars - 1, i + 1)];
+      smoothed.push((prev * 0.25) + (curr * 0.5) + (next * 0.25));
+    }
+
+    // 3. Draw sleek rounded bars with vertical gradient
+    const isSource = (color && color.includes('38bdf8')) || color === '#38bdf8';
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    if (isSource) {
+      grad.addColorStop(0, '#38bdf8');
+      grad.addColorStop(1, '#0284c7');
+    } else {
+      grad.addColorStop(0, '#1ed760');
+      grad.addColorStop(1, '#059669');
+    }
+    ctx.fillStyle = grad;
 
     for (let i = 0; i < numBars; i++) {
-      let maxVal = 0;
-      const start = i * step;
-      for (let j = 0; j < step; j += 4) {
-        const val = Math.abs(samples[start + j] || 0);
-        if (val > maxVal) maxVal = val;
-      }
+      const norm = Math.min(1, Math.pow(smoothed[i], 0.75) * 1.8);
+      const barH = Math.max(4, Math.floor(norm * (height * 0.86)));
+      const x = Math.floor(i * spacing);
+      const y = Math.floor((height - barH) / 2);
 
-      const barHeight = Math.max(4, Math.floor(Math.pow(maxVal, 0.72) * (height * 0.88)));
-      const x = Math.floor((i / numBars) * width);
-      const y = Math.floor((height - barHeight) / 2);
-
-      // Rounded Spotify style sound bars
       ctx.beginPath();
-      const radius = 2;
-      ctx.roundRect(x, y, barWidth, barHeight, radius);
+      ctx.roundRect(x, y, barWidth, barH, 2);
       ctx.fill();
     }
   }
 
   function drawFallbackWaveform(canvas, color) {
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 800;
+    const height = rect.height || 80;
+
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.scale(dpr, dpr);
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#0a0a0a';
+    ctx.fillStyle = '#0a0d12';
     ctx.fillRect(0, 0, width, height);
 
     ctx.fillStyle = color || '#1ed760';
 
-    for (let i = 0; i < 120; i++) {
-      const barH = 10 + Math.sin(i * 0.18) * (height * 0.35);
-      const x = Math.floor(i * (width / 120));
+    const numBars = 100;
+    const barWidth = 3;
+    const spacing = width / numBars;
+
+    for (let i = 0; i < numBars; i++) {
+      const barH = 8 + Math.sin(i * 0.12) * (height * 0.32);
+      const x = Math.floor(i * spacing);
       const y = Math.floor((height - barH) / 2);
       ctx.beginPath();
-      ctx.roundRect(x, y, 3, barH, 2);
+      ctx.roundRect(x, y, barWidth, barH, 2);
       ctx.fill();
     }
   }
@@ -1142,5 +1659,30 @@
     const s = Math.floor(seconds % 60);
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
+
+  // 10. Startup Session Restoration (Auto-reconnects ONLY if a job is actively processing)
+  try {
+    const savedJobId = sessionStorage.getItem('unnecessary_fm_active_job');
+    if (savedJobId) {
+      fetch(buildUrl(`/api/status/${savedJobId}`))
+        .then(res => {
+          if (!res.ok) throw new Error("Job not found");
+          return res.json();
+        })
+        .then(statusData => {
+          if (statusData.status === 'processing' || statusData.status === 'queued') {
+            currentJobId = savedJobId;
+            showProcessingState(statusData.stage || 'Processing DSP audio...');
+            trackJobProgress(savedJobId);
+          } else {
+            // Already completed or failed — clear session so fresh visits remain clean
+            sessionStorage.removeItem('unnecessary_fm_active_job');
+          }
+        })
+        .catch(() => {
+          sessionStorage.removeItem('unnecessary_fm_active_job');
+        });
+    }
+  } catch (e) {}
 
 })();
