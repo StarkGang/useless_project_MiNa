@@ -163,7 +163,14 @@
   // A/B Studio Comparison & Stem Elements
   const btnABSwitch = document.getElementById('btnABSwitch');
   const abSwitchIndicator = document.getElementById('abSwitchIndicator');
+  const abActiveChip = document.getElementById('abActiveChip');
   const abBalanceSlider = document.getElementById('abBalanceSlider');
+  const faderBlendLabel = document.getElementById('faderBlendLabel');
+  const btnSoloA = document.getElementById('btnSoloA');
+  const btnSoloB = document.getElementById('btnSoloB');
+  const btnPresetA = document.getElementById('btnPresetA');
+  const btnPresetBlend = document.getElementById('btnPresetBlend');
+  const btnPresetB = document.getElementById('btnPresetB');
   const btnSkipBackSource = document.getElementById('btnSkipBackSource');
   const btnSkipFwdSource = document.getElementById('btnSkipFwdSource');
   const btnSpeedSource = document.getElementById('btnSpeedSource');
@@ -365,7 +372,10 @@
 
   function handleFileSelected(file) {
     currentFile = file;
-    if (selectedFileName) selectedFileName.textContent = file.name;
+    if (selectedFileName) {
+      selectedFileName.textContent = file.name;
+      selectedFileName.title = file.name;
+    }
     if (selectedFileSize) selectedFileSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
     if (dropZoneContent) dropZoneContent.classList.add('hidden');
     if (selectedFilePill) selectedFilePill.classList.remove('hidden');
@@ -658,7 +668,11 @@
     btnDur30.addEventListener('click', () => {
       selectedDuration = 30;
       btnDur30.classList.add('active');
-      if (btnDur60) btnDur60.classList.remove('active');
+      btnDur30.setAttribute('aria-pressed', 'true');
+      if (btnDur60) {
+        btnDur60.classList.remove('active');
+        btnDur60.setAttribute('aria-pressed', 'false');
+      }
       if (generateBtnLabel) generateBtnLabel.textContent = 'CREATE MUSIC (30s)';
     });
   }
@@ -666,7 +680,11 @@
     btnDur60.addEventListener('click', () => {
       selectedDuration = 60;
       btnDur60.classList.add('active');
-      if (btnDur30) btnDur30.classList.remove('active');
+      btnDur60.setAttribute('aria-pressed', 'true');
+      if (btnDur30) {
+        btnDur30.classList.remove('active');
+        btnDur30.setAttribute('aria-pressed', 'false');
+      }
       if (generateBtnLabel) generateBtnLabel.textContent = 'CREATE MUSIC (60s)';
     });
   }
@@ -1042,8 +1060,9 @@
 
     // Update Bottom Player & Right Panel
     const trackName = `Candidate ${letter} ${cand.is_winner ? '[Winner]' : ''}`;
+    const trackSub = `${cand.scale_name} • ${cand.tempo_bpm} BPM • ${cand.form}`;
     if (playerTrackTitle) playerTrackTitle.textContent = trackName;
-    if (playerTrackSubtitle) playerTrackSubtitle.textContent = `${cand.scale_name} • ${cand.tempo_bpm} BPM • ${cand.form}`;
+    if (playerTrackSubtitle) playerTrackSubtitle.textContent = trackSub;
     if (rightPanelTrackTitle) rightPanelTrackTitle.textContent = trackName;
     if (rightPanelTrackSub) rightPanelTrackSub.textContent = `Procedural Composition • ${cand.tempo_bpm} BPM`;
     if (libTrackTitle) libTrackTitle.textContent = trackName;
@@ -1138,11 +1157,31 @@
     if (target === 'source') {
       abSwitchIndicator.textContent = 'Playing: [A] Raw Source Noise';
       btnABSwitch.className = 'btn-ab-switch playing-source';
+      if (abActiveChip) abActiveChip.textContent = 'Active: [A] Raw Noise';
+      if (faderBlendLabel) faderBlendLabel.textContent = '100% Raw [A]';
       if (abBalanceSlider) abBalanceSlider.value = 0;
+      updateFaderButtonsState(0);
     } else {
       abSwitchIndicator.textContent = 'Playing: [B] Produced Track';
       btnABSwitch.className = 'btn-ab-switch playing-result';
+      if (abActiveChip) abActiveChip.textContent = 'Active: [B] Produced Track';
+      if (faderBlendLabel) faderBlendLabel.textContent = '100% Master [B]';
       if (abBalanceSlider) abBalanceSlider.value = 100;
+      updateFaderButtonsState(100);
+    }
+  }
+
+  function updateFaderButtonsState(val) {
+    if (btnSoloA) btnSoloA.classList.toggle('active', val === 0);
+    if (btnSoloB) btnSoloB.classList.toggle('active', val === 100);
+    if (btnPresetA) btnPresetA.classList.toggle('active', val === 0);
+    if (btnPresetBlend) btnPresetBlend.classList.toggle('active', val > 35 && val < 65);
+    if (btnPresetB) btnPresetB.classList.toggle('active', val === 100);
+
+    if (abBalanceSlider) {
+      // Set dynamic border-color on slider thumb
+      const thumbColor = val === 0 ? '#38bdf8' : (val === 100 ? '#1ed760' : '#ffffff');
+      abBalanceSlider.style.setProperty('--thumb-color', thumbColor);
     }
   }
 
@@ -1218,6 +1257,47 @@
     btnABSwitch.addEventListener('click', toggleABComparison);
   }
 
+  // Quick Solo & Blend Preset Buttons
+  if (btnSoloA) {
+    btnSoloA.addEventListener('click', () => {
+      if (abBalanceSlider) abBalanceSlider.value = 0;
+      balanceValue = 0;
+      applyBalance(0);
+    });
+  }
+
+  if (btnPresetA) {
+    btnPresetA.addEventListener('click', () => {
+      if (abBalanceSlider) abBalanceSlider.value = 0;
+      balanceValue = 0;
+      applyBalance(0);
+    });
+  }
+
+  if (btnPresetBlend) {
+    btnPresetBlend.addEventListener('click', () => {
+      if (abBalanceSlider) abBalanceSlider.value = 50;
+      balanceValue = 50;
+      applyBalance(50);
+    });
+  }
+
+  if (btnSoloB) {
+    btnSoloB.addEventListener('click', () => {
+      if (abBalanceSlider) abBalanceSlider.value = 100;
+      balanceValue = 100;
+      applyBalance(100);
+    });
+  }
+
+  if (btnPresetB) {
+    btnPresetB.addEventListener('click', () => {
+      if (abBalanceSlider) abBalanceSlider.value = 100;
+      balanceValue = 100;
+      applyBalance(100);
+    });
+  }
+
   // Real-Time Sound Balance Slider (Blends between Source and Mastered Track)
   if (abBalanceSlider) {
     abBalanceSlider.addEventListener('input', (e) => {
@@ -1233,8 +1313,21 @@
     sourceAudioPlayer.volume = srcGain;
     resultAudioPlayer.volume = resGain;
 
+    updateFaderButtonsState(val);
+
+    if (faderBlendLabel) {
+      if (val === 0) faderBlendLabel.textContent = '100% Raw [A]';
+      else if (val === 100) faderBlendLabel.textContent = '100% Master [B]';
+      else if (val === 50) faderBlendLabel.textContent = '50% / 50% Blend';
+      else faderBlendLabel.textContent = `${100 - val}% [A] / ${val}% [B]`;
+    }
+
     // If both volumes are active (> 0), synchronize both players in parallel
     if (val > 0 && val < 100) {
+      if (abActiveChip) abActiveChip.textContent = `Active: Dual Blend (${100 - val}% [A] / ${val}% [B])`;
+      if (abSwitchIndicator) abSwitchIndicator.textContent = `Playing: Dual Blend (${100 - val}% / ${val}%)`;
+      if (btnABSwitch) btnABSwitch.className = 'btn-ab-switch';
+
       if (!sourceAudioPlayer.paused && resultAudioPlayer.paused) {
         resultAudioPlayer.currentTime = sourceAudioPlayer.currentTime;
         resultAudioPlayer.play().catch(() => {});

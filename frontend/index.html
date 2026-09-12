@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>THE UNNECESSARY FM — Procedural Noise-to-Music DSP Studio</title>
   <meta name="description"
-    content="Turns random noise into music. Record or upload, ta daa... your one minute music is ready! 100% algorithmic procedural audio synthesis. Team MiNa • TinkerHub Useless Projects 3.0">
+    content="Turns random noise into music. Record or upload, ta daa... your music is ready! 100% algorithmic procedural audio synthesis. Team MiNa • TinkerHub Useless Projects 3.0">
   <meta name="api-base-url" content="">
   <meta name="application-name" content="TheUnnecessaryFM">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,6 +14,12 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#121212">
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -30,14 +36,7 @@
         <!-- Brand / App Logo -->
         <a href="#" class="brand-logo" title="The Unnecessary FM">
           <div class="logo-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 10v4"></path>
-              <path d="M6 6v12"></path>
-              <path d="M10 2v20"></path>
-              <path d="M14 7v10"></path>
-              <path d="M18 4v16"></path>
-              <path d="M22 9v6"></path>
-            </svg>
+            <img src="images/logo-mark.png" alt="The Unnecessary FM Logo" class="brand-logo-img">
           </div>
           <div class="logo-text">
             <span class="logo-name">THE UNNECESSARY FM</span>
@@ -65,7 +64,6 @@
             </svg>
             <span>Your Session</span>
           </div>
-          <span class="badge-offline">100% OFFLINE</span>
         </div>
 
         <div class="library-list">
@@ -167,29 +165,15 @@
           <div class="hero-content">
             <div class="hero-artwork">
               <div class="clean-hero-cover" title="The Unnecessary FM">
-                <div class="cover-inner">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hero-cover-icon">
-                    <path d="M9 18V5l12-2v13"></path>
-                    <circle cx="6" cy="18" r="3"></circle>
-                    <circle cx="18" cy="16" r="3"></circle>
-                  </svg>
-                  <span class="cover-brand">THE UNNECESSARY FM</span>
-                </div>
+                <img src="images/hero-logo.png" alt="The Unnecessary FM" class="hero-cover-img">
               </div>
             </div>
 
             <div class="hero-details">
-              <div class="hero-badge-row">
-                <span class="hero-type">ALGORITHMIC DSP STUDIO</span>
-                <span class="hero-separator">&bull;</span>
-                <span class="hero-tag">TURN NOISE INTO SONGS</span>
-              </div>
-
               <h1 class="hero-title">THE UNNECESSARY FM</h1>
 
               <p class="hero-tagline">
-                Turns random noise into music! Record or upload any sound with audible volume — street traffic, loud room chatter, speaking random words, singing, claps, or kitchen percussion.
-                <span class="hero-subnote">💡 Pro-tip: Faint fan noise or tiny mouse clicks are too quiet for melody generation — give it some audible volume so your song sounds full!</span>
+                THE UNNECESSARY FM turns random noise into music.. you record or upload, ta daa... your music is ready!!!
               </p>
 
               <div class="hero-actions-row">
@@ -223,7 +207,7 @@
                   <h3>Source Sound Input</h3>
                   <!-- Small 'i' Info Button with Hover Sound Guide Popover -->
                   <div class="info-tooltip-wrapper" id="soundGuideTooltipWrap" tabindex="0">
-                    <button type="button" class="btn-info-icon" id="soundGuideInfoBtn" aria-label="Audio Guide &amp; Sound Tips" title="Sound Guide • What works best">
+                    <button type="button" class="btn-info-icon" id="soundGuideInfoBtn" aria-label="Audio Guide &amp; Sound Tips">
                       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -231,10 +215,9 @@
                       </svg>
                     </button>
                     <div class="info-tooltip-popover" role="tooltip">
-                      <div class="notice-badge">🔊 SOUND GUIDE &bull; WHAT WORKS BEST</div>
-                      <p><strong>Make sure your audio is clearly audible!</strong> The procedural DSP engine extracts pitch, transients, and rhythm from your sound.</p>
-                      <p class="popover-tips"><strong>Great sounds:</strong> Street traffic, loud room chatter, speaking words aloud, singing, clapping, keys, banging pots.</p>
-                      <p class="popover-warning"><em>⚠️ Avoid faint static, silent rooms, faint fan hums, or quiet mouse clicks — if the sound is too low, the music won't have enough signal to build from!</em></p>
+                      <div class="popover-title">Sound Guide</div>
+                      <p>Works best with audible sounds — speech, singing, street chatter, claps, or percussion.</p>
+                      <div class="popover-tip">💡 Tip: Avoid silence or faint fan hums for rich musical output.</div>
                     </div>
                   </div>
                 </div>
@@ -326,7 +309,7 @@
                     <div class="label-with-action">
                       <label for="energySelect">Dynamic Energy</label>
                       <div class="info-tooltip-wrapper" id="energyInfoTooltipWrap" tabindex="0">
-                        <button type="button" class="btn-info-icon" id="energyInfoBtn" aria-label="Dynamic Energy Mode Guide" title="Dynamic Energy Guide • What each mode does">
+                        <button type="button" class="btn-info-icon" id="energyInfoBtn" aria-label="Dynamic Energy Mode Guide">
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -334,28 +317,10 @@
                           </svg>
                         </button>
                         <div class="info-tooltip-popover energy-info-popover" role="tooltip">
-                          <div class="notice-badge">⚡ DYNAMIC ENERGY MODES</div>
-                          <div class="energy-mode-list">
-                            <div class="energy-mode-card is-default">
-                              <div class="energy-mode-head">
-                                <span class="energy-mode-name">Subtle &amp; Ambient</span>
-                                <span class="mode-badge-default">Default</span>
-                              </div>
-                              <p>Gentle tempo &amp; spacious arrangement. Maximizes room for your raw noise to be heard clearly so you feel and hear the algorithm turning your input sound into music.</p>
-                            </div>
-                            <div class="energy-mode-card">
-                              <div class="energy-mode-head">
-                                <span class="energy-mode-name">Balanced Arc</span>
-                              </div>
-                              <p>Standard genre tempo with classic song structure (intro, build, hook, outro) blending source noise and synthesized groove equally.</p>
-                            </div>
-                            <div class="energy-mode-card">
-                              <div class="energy-mode-head">
-                                <span class="energy-mode-name">High Dynamics</span>
-                              </div>
-                              <p>Faster tempo (+8%), denser note sequences, punchy drum transients, and high-energy build-ups for maximum intensity.</p>
-                            </div>
-                          </div>
+                          <div class="popover-title">Dynamic Energy</div>
+                          <div class="popover-item"><strong>Subtle:</strong> Spacious tempo &amp; ambient room</div>
+                          <div class="popover-item"><strong>Balanced:</strong> Classic structure &amp; even groove</div>
+                          <div class="popover-item"><strong>High:</strong> Faster BPM, punchy drums &amp; dense build-ups</div>
                         </div>
                       </div>
                     </div>
@@ -383,15 +348,17 @@
 
                 <!-- Duration Toggle -->
                 <div class="form-group">
-                  <label>Output Duration <span class="hint">(default 30s)</span></label>
-                  <div class="duration-toggle-group" id="durationToggleGroup">
-                    <button type="button" class="btn-duration active" id="btnDur30" data-dur="30">
+                  <label>Output Duration</label>
+                  <div class="duration-toggle-group" id="durationToggleGroup" role="group" aria-label="Output song duration">
+                    <button type="button" class="btn-duration active" id="btnDur30" data-dur="30" aria-pressed="true">
+                      <span class="dur-icon">⚡</span>
                       <span class="dur-label">30s</span>
-                      <span class="dur-sub">Fast — recommended for hosted</span>
+                      <span class="dur-badge">Quick</span>
                     </button>
-                    <button type="button" class="btn-duration" id="btnDur60" data-dur="60">
+                    <button type="button" class="btn-duration" id="btnDur60" data-dur="60" aria-pressed="false">
+                      <span class="dur-icon">🎵</span>
                       <span class="dur-label">60s</span>
-                      <span class="dur-sub">Full-length track</span>
+                      <span class="dur-badge">Full Track</span>
                     </button>
                   </div>
                 </div>
@@ -407,7 +374,6 @@
                     <span id="generateBtnLabel">CREATE MUSIC (30s)</span>
                   </button>
                   <p class="generate-disclaimer">
-                    <span class="dsp-pulse-dot"></span>
                     <span>Your noise transformed into music &mdash; 100% procedural DSP</span>
                   </p>
                 </div>
@@ -526,10 +492,76 @@
             <p>Upload any ordinary noise or record through your mic. The procedural DSP engine will extract pitch, transients, and timbre to compose a unique track from your sound.</p>
           </div>
 
-          <!-- Processing State with Animated Loader -->
+          <!-- Processing State with Animated 3D Gramophone to Top-View Spinning Loader -->
           <div class="processing-state hidden" id="processingState">
-            <div class="equalizer-spinner">
-              <span></span><span></span><span></span><span></span><span></span>
+            <div class="gramophone-stage" aria-hidden="true">
+              <!-- 3D Camera Rig that pivots between isometric Gramophone view and Top-Down view -->
+              <div class="gramophone-camera-rig" id="gramophoneRig">
+                <div class="gramophone-machine">
+                  <!-- Classic Wood Cabinet Base -->
+                  <div class="gramophone-cabinet">
+                    <div class="cab-face cab-top">
+                      <div class="brass-corner corner-tl"></div>
+                      <div class="brass-corner corner-tr"></div>
+                      <div class="brass-corner corner-bl"></div>
+                      <div class="brass-corner corner-br"></div>
+                      <div class="brand-plaque">UNNECESSARY FM</div>
+                    </div>
+                    <div class="cab-face cab-front"></div>
+                    <div class="cab-face cab-right">
+                      <div class="winding-crank"></div>
+                    </div>
+                  </div>
+
+                  <!-- Rotating Turntable Platter with Vinyl Record -->
+                  <div class="turntable-platter-assembly">
+                    <div class="platter-base"></div>
+                    <!-- Spinning Vinyl Record -->
+                    <div class="gramophone-vinyl-disc" id="gramophoneVinylDisc">
+                      <div class="vinyl-groove groove-outer"></div>
+                      <div class="vinyl-groove groove-mid"></div>
+                      <div class="vinyl-groove groove-inner"></div>
+                      <div class="vinyl-runout"></div>
+                      <div class="vinyl-label">
+                        <span class="vinyl-label-title">UNNECESSARY</span>
+                        <div class="vinyl-spindle"></div>
+                        <span class="vinyl-rpm">33 RPM</span>
+                      </div>
+                      <div class="vinyl-light-reflection"></div>
+                    </div>
+                    <!-- Concentric Sound Waves during Top View -->
+                    <div class="vinyl-sound-waves">
+                      <span class="sound-ring ring-1"></span>
+                      <span class="sound-ring ring-2"></span>
+                      <span class="sound-ring ring-3"></span>
+                    </div>
+                  </div>
+
+                  <!-- Vintage Curved Brass Tonearm & Soundbox Needle -->
+                  <div class="gramophone-tonearm-assembly">
+                    <div class="tonearm-support-post"></div>
+                    <div class="tonearm-brass-elbow"></div>
+                    <div class="tonearm-tapered-tube"></div>
+                    <div class="tonearm-soundbox">
+                      <div class="soundbox-stylus"></div>
+                      <div class="stylus-audio-dot"></div>
+                    </div>
+                  </div>
+
+                  <!-- Flared Golden Brass Gramophone Horn -->
+                  <div class="gramophone-horn-assembly">
+                    <div class="horn-throat"></div>
+                    <div class="horn-elbow"></div>
+                    <div class="horn-flare">
+                      <div class="horn-rib rib-1"></div>
+                      <div class="horn-rib rib-2"></div>
+                      <div class="horn-rib rib-3"></div>
+                      <div class="horn-rim"></div>
+                      <div class="horn-acoustic-center"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="processing-text-group">
               <div class="progress-badge">
@@ -618,22 +650,67 @@
               </div>
             </div>
 
-            <!-- A/B Synchronized Comparison Bar -->
+            <!-- A/B Synchronized Comparison Console -->
             <div class="ab-compare-bar" id="abCompareBar">
-              <div class="ab-status-group">
-                <span class="ab-badge">A/B INSTANT COMPARE</span>
-                <span class="ab-explanation">Toggle or blend between Raw Noise and Produced Track</span>
-              </div>
-              <div class="ab-controls-group">
-                <button type="button" class="btn-ab-switch" id="btnABSwitch" title="Toggle between Raw Noise [A] and Produced Track [B] (Shortcut: Spacebar)">
-                  <span class="ab-switch-indicator" id="abSwitchIndicator">Playing: [B] Produced Track</span>
-                  <span class="ab-hotkey-hint">[Space] to switch</span>
-                </button>
-                <div class="ab-balance-wrap" title="Blend Source Noise [A] and Produced Track [B]">
-                  <span class="balance-tag">Source [A]</span>
-                  <input type="range" id="abBalanceSlider" class="ab-balance-slider" min="0" max="100" value="100" step="1" title="0% = Raw Source Noise, 100% = Produced Track">
-                  <span class="balance-tag">Track [B]</span>
+              <!-- Top Row: Module Header & Primary Toggle -->
+              <div class="ab-bar-header">
+                <div class="ab-title-lockup">
+                  <div class="ab-badge-cluster">
+                    <span class="ab-badge">
+                      <span class="ab-badge-dot"></span>
+                      A/B INSTANT COMPARE
+                    </span>
+                    <span class="ab-live-chip" id="abActiveChip">Active: [B] Produced Track</span>
+                  </div>
+                  <h4 class="ab-headline">Source vs. Mastered Track Crossfader</h4>
+                  <p class="ab-explanation">Instant A/B toggle or smooth continuous blending between your raw source noise and the mastered track.</p>
                 </div>
+
+                <div class="ab-primary-toggle-wrap">
+                  <button type="button" class="btn-ab-switch playing-result" id="btnABSwitch" aria-label="Toggle between Raw Noise [A] and Produced Track [B] (Shortcut: Spacebar)">
+                    <span class="ab-switch-icon">
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/></svg>
+                    </span>
+                    <div class="ab-switch-text-block">
+                      <span class="ab-switch-indicator" id="abSwitchIndicator">Playing: [B] Produced Track</span>
+                      <span class="ab-hotkey-hint">Press <kbd>Space</kbd> to switch</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bottom Row: Studio Crossfader & Quick Solo Buttons -->
+              <div class="ab-fader-console">
+                <!-- Channel A Button -->
+                <button type="button" class="ab-channel-btn btn-channel-a" id="btnSoloA" title="Solo Channel [A]: 100% Raw Noise">
+                  <span class="ch-badge ch-a">SRC [A]</span>
+                  <span class="ch-label">Raw Noise</span>
+                </button>
+
+                <!-- Center Crossfader Track & Detent -->
+                <div class="ab-crossfader-strip" title="Real-Time DJ Crossfader (Blend A/B)">
+                  <div class="ab-fader-track-labels">
+                    <span class="fader-end-label ch-a-color">100% Raw</span>
+                    <span class="fader-center-indicator" id="faderBlendLabel">100% Track [B]</span>
+                    <span class="fader-end-label ch-b-color">100% Master</span>
+                  </div>
+                  <div class="ab-slider-wrapper">
+                    <div class="ab-track-glow"></div>
+                    <div class="ab-center-detent-marker" title="50 / 50 Blend Mark"></div>
+                    <input type="range" id="abBalanceSlider" class="ab-balance-slider" min="0" max="100" value="100" step="1" aria-label="Crossfade balance between Source Noise and Produced Track">
+                  </div>
+                  <div class="ab-preset-pills">
+                    <button type="button" class="fader-preset-btn" id="btnPresetA">100% Source [A]</button>
+                    <button type="button" class="fader-preset-btn" id="btnPresetBlend">50/50 Blend</button>
+                    <button type="button" class="fader-preset-btn active" id="btnPresetB">100% Master [B]</button>
+                  </div>
+                </div>
+
+                <!-- Channel B Button -->
+                <button type="button" class="ab-channel-btn btn-channel-b active" id="btnSoloB" title="Solo Channel [B]: 100% Produced Track">
+                  <span class="ch-badge ch-b">TRK [B]</span>
+                  <span class="ch-label">Produced Track</span>
+                </button>
               </div>
             </div>
 
