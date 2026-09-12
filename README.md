@@ -2,8 +2,8 @@
 
 # THE UNNECESSARY FM 📻✨
 
-> **Turns random, everyday noise into full produced songs using 100% procedural Digital Signal Processing (DSP).**  
-> Record street traffic, loud room chatter, speaking words aloud, or clapping and ta daa... your song is ready!
+> **Turns random, everyday noise into full produced songs using math & audio processing (DSP / Digital Signal Processing).**  
+> Record street traffic, loud room chatter, speaking words aloud, or clapping, click Create Music and ta daa... your song is ready!
 
 ---
 
@@ -11,8 +11,8 @@
 
 ### Team Name: MiNa
 ### Team Members
-- **Team Lead:** MIDHUN K M — *NSS College of Engineering, Palakkad*
-- **Member 2:** NAYANA P — *NSS College of Engineering, Palakkad*
+- **Team Lead:** MIDHUN K M (*NSS College of Engineering, Palakkad*)
+- **Member 2:** NAYANA P (*NSS College of Engineering, Palakkad*)
 
 ### Hosted Project Link
 - 🌐 **Live Web App:** [useless-project-mina.onrender.com](https://useless-project-mina.onrender.com/)
@@ -22,21 +22,33 @@
 
 ## Project Description
 
-**THE UNNECESSARY FM** turns random noise into music.. you record or upload, ta daa... your music is ready using **pure algorithmic DSP!**
+**THE UNNECESSARY FM** turns random noise into music, just record or upload it, push the Create Music button and there you have it... your music is ready, all thanks to audio math (DSP / Digital Signal Processing)!
+
+> 💡 **Wait a minute, what on Earth is DSP? Just how does mathematics actually create music?**  
+> DSP stands for **Digital Signal Processing**, which is merely a fancy engineering way of putting it when one means **'carrying out magic math on sound waves'**! Here is the way that math actually constructs a song from your noise:
+> 
+> - 🔍 **Frequency X-Ray (Fourier Math):** The equations examine your noisy waveform to reveal the hidden pitches and frequencies that are secretly contained within it.
+> - ✂️ **The Geometric Scalpel (Transient Slicing):** Sudden acoustic spikes (for example, a clap, a cough, or a clatter of utensils) are cut into sharp drums such as kicks, snares, and hi-hats.
+> - 🎤 **Universal Scale Auto-Tuner & Vocal Lead:** Tracks speech vowels, hums, and singing takes, quantizing them frame-by-frame to the song's musical key without cutting off lyrics or words, plus stacking lush 3rd/5th choir harmonies!
+> - 🎹 **Harmonic Sifting & Resonant Modeling:** Mathematics is used to distinguish the drums from the continuous hums, identifies the nearest musical scale (for example, C minor), and converts the noise into melodic bass lines and synth sounds.
+> - 🎛️ **The Algorithmic Producer:** Takes all the chopped noise samples and places them on a rhythmic tempo grid (BPM), then organises the entire song in the following order: Intro → Verse → Drop → Outro!
 
 ---
 
 ## The Problem (that doesn't exist)
+We were walking in the evening thinking what to build for this hackathon, and while passing by that heavy traffic, he (yeah my team mate) told me something stupid, "wish these loud honking noises would become music instead!". And can you believe it? that's when we had this eureka moment!
 
-The world is full of perfectly ordinary noises like loud honking auto-rickshaws, loud cafeteria chatter, squeaky swivel chairs, kitchen utensils clattering, and people muttering, but for some reason, they aren't songs. We decided this was unacceptable.
+We realised the world is full of perfectly ordinary noises like loud honking auto-rickshaws, loud cafeteria chatter, squeaky swivel chairs, kitchen utensils clattering, and people muttering, but for some reason, they aren't songs. We decided this was unacceptable... (or maybe it's just us?)
 
 ---
 
 ## The Solution (that nobody asked for)
 
-We built an algorithmic DSP production studio that turns ordinary noises into songs. Because apparently, just being a noise wasn't enough.
+We had absolute fun developing and testing this thing!
 
-Feed it any audible sound, pick your style, hit **CREATE MUSIC**, and listen to your noise transformed into a produced composition with dual scrubbable waveforms, real-time A/B source comparison, and multi-stem architectural breakdowns.
+We wanted to see what we could do with math and signal processing. We've been shouting hello, hi, bye, counting numbers into laptop mics, capturing clapping noises and laughing at the way this dissected the noise and turned it into nice tunes.
+
+Just give it any audible sound, choose your style and press **CREATE MUSIC** button. TA-DA!!! Your music is ready!
 
 ---
 
@@ -44,14 +56,15 @@ Feed it any audible sound, pick your style, hit **CREATE MUSIC**, and listen to 
 
 > [!IMPORTANT]
 > **The Golden Rule: Give it audible volume and dynamic texture!**  
-> The procedural DSP engine relies on clear acoustic energy, pitch variations, and rhythmic transients to extract notes and slices. If the input sound is silent or too faint, the music engine has nothing to work with.
+> The music engine relies on clear acoustic energy, pitch variations, and rhythm spikes to extract notes and slices. If the input sound is completely silent or too faint, there is nothing for the algorithms to work with.
 
 | Sound Type | Result | Why It Works / What to Expect |
 |---|---|---|
 | **Street & City Traffic** 🚗 | 🌟🌟🌟🌟🌟 Exceptional | Rich frequency spectrum, engine rumbles translate to punchy sub-bass, tire whooshes become lush sweeping risers. |
 | **Room / Cafe Chatter** 🗣️ | 🌟🌟🌟🌟🌟 Exceptional | Formant peaks and vocal cadence slice into rhythmic chops, vocoder-style hooks, and vocal percussion. |
 | **Speaking Random Words Aloud** 🎙️ | 🌟🌟🌟🌟🌟 Exceptional | Clear consonants and vowels yield sharp transient attacks for snares, hi-hats, and melodic lead instruments. |
-| **Singing or Humming** 🎵 | 🌟🌟🌟🌟🌟 Exceptional | Pitch tracker locks onto your fundamental notes and re-synthesizes full modal chord progressions around your voice. |
+| **Singing or Humming** 🎵 | 🌟🌟🌟🌟🌟 Exceptional | Pitch tracker locks onto your fundamental notes and re-synthesizes full modal chord progressions around your voice, with multi-part choir harmonization. |
+| **Beatboxing & Mouth Drums** 🥁 | 🌟🌟🌟🌟🌟 Exceptional | Specialized transient extraction splits lip bass kicks, mouth snares, and hi-hats into a punchy authentic acoustic drum kit. |
 | **Keys Jangling & Clapping** 🔑 | 🌟🌟🌟🌟 Amazing | High-frequency transient bursts transform into crisp hi-hat rolls, shakers, and syncopated percussion. |
 | **Banging Pots & Kitchen Percussion** 🍳 | 🌟🌟🌟🌟 Amazing | Resonant metallic tones slice into kicks, 808 subs, and melodic mallets. |
 | *Faint Fan Noise or Hum* 💨 | ⚠️ Poor / Too Faint | Low constant hums lack dynamic transients and pitch contours, leading to faint or static-like output. |
@@ -65,16 +78,19 @@ Feed it any audible sound, pick your style, hit **CREATE MUSIC**, and listen to 
 
 - **Languages:** Python 3.10+, JavaScript (ES6+), HTML5, Vanilla CSS3
 - **Backend Framework:** [FastAPI](https://fastapi.tiangolo.com/), [Uvicorn](https://www.uvicorn.org/) (Asynchronous REST API)
-- **Audio DSP Pipeline:**
-  - `numpy` & `scipy`: Fast Fourier Transforms (FFT), convolution, biquad IIR/FIR filter design, envelope followers
+- **Audio & Math Engine (Who ever thought math + noise = music?!):**
+  - Whoever thought you could use math + noise to get actual music??
+  - Honestly, I never thought I'd use trigonometry in real life, but wow... sine waves, frequencies, and math formulas actually make fire songs!
+  - `numpy` & `scipy`: Fast Fourier Transforms (FFT), convolution, biquad IIR/FIR filter design, envelope followers, autocorrelation pitch estimation
   - `librosa`: Spectral centroid, zero-crossing rates, chromagram pitch tracking, onset envelope detection
+  - `Custom Studio Auto-Tuner`: Sliding frame-by-frame pitch quantization to scale notes, granular WSOLA length preservation, formant tilt correction, and multi-voice choir harmonization (`[0, 3/4, 7]` semitones)
   - `soundfile`: High-fidelity uncompressed 16-bit 44.1kHz master WAV reading/writing
   - `ffmpeg`: Universal audio decoding (MP3, WAV, AAC, M4A, FLAC, OGG, WEBM)
 - **Frontend Architecture:**
-  - Spotify-grade dark UI design system (zero third-party UI framework bloat)
-  - HTML5 Canvas dual interactive scrubbable waveform visualizers
-  - Real-time A/B synchronized audio comparison engine with continuous crossfade
-  - Seed-deterministic reproducible procedural compositions
+  - Sleek Spotify-inspired dark UI built with vanilla CSS, no heavy UI framework bloat
+  - Interactive scrubbable waveform players drawn directly on HTML5 Canvas
+  - Real-time synchronized A/B audio comparison with smooth crossfading
+  - Fully reproducible songs generated with customizable random seeds
 
 ---
 
@@ -190,10 +206,12 @@ http://localhost:8080/
 
 FastAPI provides an automatic Swagger UI at `http://localhost:8080/docs`.
 
-- **`POST /api/generate`**: Upload audio (multipart form) along with genre, energy (`balanced`, `low`, `high`), output duration (`30` or `60`s), and optional seed.
-- **`GET /api/jobs/{job_id}`**: Poll job progress, logs, status, and generated composition metadata.
-- **`GET /api/audio/{filename}`**: Stream uncompressed generated audio.
-- **`GET /api/health`**: Health check and system verification.
+- **`POST /api/generate`**: Upload audio along with genre preference, energy level, output duration, and optional random seed.
+- **`GET /api/progress/{job_id}`**: Server-Sent Events (SSE) stream for real-time generation progress and stage updates.
+- **`GET /api/status/{job_id}`**: Check job status, current stage, and progress percentage.
+- **`GET /api/result/{job_id}`**: Retrieve full composition metadata, audio analysis DNA, and candidate links.
+- **`GET /api/audio/{job_id}/{candidate_id}`**: Stream generated master WAV audio file.
+- **`GET /api/health`**: Fast health check and uptime verification.
 
 ---
 
@@ -201,22 +219,24 @@ FastAPI provides an automatic Swagger UI at `http://localhost:8080/docs`.
 
 ### 1. Studio Dashboard & Hero
 ![Screenshot1](images/ss/ss_1.png)
-*Modern Spotify-inspired studio interface with direct audio upload and microphone recording.*
+*The initial interface where you can drop your recorded traffic noise (why would you have that?) or record you 
+beatboxing, clapping, counting or just saying your own name (say my name!!)!!*
 
 ### 2. Composition Directives & Sound Styles
 ![Screenshot2](images/ss/ss_2.png)
-*Interactive genre shelf selecting Pop, Rap/Electro, Hip Hop, Trap, Minimal, or Ambient.*
+*Select what would you like your noise to become. A rap song? A pop song? A hip-hop song? Wait, Wait an rap song from recording of you saying your crush's name??*
 
-### 3. Procedural DSP Signal Processing
+### 3. Sound Styles & Presets Dropdown
 ![Screenshot3](images/ss/ss_3.png)
-*Algorithmic transient extraction, HPSS harmonic separation, and multi-candidate scoring in progress.*
+*All the flavors you can turn your noise into! From pop, rap, boom-bap hip-hop, heavy 808 trap, all the way to chill ambient drone (when you just need peace and quiet).*
 
-### 4. Dual Waveform Player & A/B Instant Comparison
+### 4. Procedural DSP Signal Processing
 ![Screenshot4](images/ss/ss_4.png)
-*Interactive audio workspace with scrubbable waveforms, A/B instant compare, master WAV download, and stem architecture breakdown.*
+*You wait for a few minute, thinking what magic is happening in the background? Don't worry we are just extracting the soul of that noise, and turning it into something, uhh, pleasing?*
 
-### 5. Architecture & DSP Signal Flow
-![Workflow Architecture](images/po.png)
+### 5. Dual Waveform Player & A/B Instant Comparison
+![Screenshot5](images/ss/ss_5.png)
+*Now listen to your noise, uhh I mean, your song! You can compare it with the original noise too, isn't it just fun?*
 
 ---
 

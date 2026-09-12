@@ -125,12 +125,13 @@ def analyze_rhythm(audio: np.ndarray, sr: int = 44100) -> RhythmFeatures:
                     while bpm < 65.0:
                         bpm *= 2.0
 
-                    tempo_confidence = float(np.clip((peak_ac * 0.6) + (ioi_regularity * 0.4), 0.0, 1.0))
-                    if tempo_confidence > 0.35 and rhythmic_density > 0.6:
+                    # Periodic rhythm requires consistent inter-onset intervals (ioi_regularity)
+                    tempo_confidence = float(np.clip((peak_ac * 0.5) + (ioi_regularity * 0.5), 0.0, 1.0))
+                    if tempo_confidence > 0.38 and rhythmic_density > 0.6 and ioi_regularity >= 0.18:
                         has_reliable_rhythm = True
                         estimated_tempo = round(bpm, 1)
                     else:
-                        estimated_tempo = round(bpm, 1) if 70 <= bpm <= 130 else 95.0
+                        estimated_tempo = round(bpm, 1) if (70 <= bpm <= 130 and ioi_regularity >= 0.15) else 95.0
         except Exception:
             estimated_tempo = 95.0
 

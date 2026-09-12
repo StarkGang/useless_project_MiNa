@@ -6,7 +6,7 @@ and signature synthesizer/resonator designs.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from ..utils.random import SeededRNG
@@ -36,6 +36,92 @@ class ArtistProfile:
     chord_mix: float = 0.85
     bass_mix: float = 1.00
     special_flags: Dict[str, bool] = field(default_factory=dict)
+    display_name: str = ""
+    vibe: str = ""
+    arrangement_flow: str = "standard_cinematic"
+    intro_lead_style: str = ""
+
+    def __post_init__(self):
+        if not self.display_name or not self.vibe:
+            meta = STYLE_DISPLAY_METADATA.get(self.id, (self.name, self.track_title_hint))
+            if not self.display_name:
+                self.display_name = meta[0]
+            if not self.vibe:
+                self.vibe = meta[1]
+
+        if not self.arrangement_flow or self.arrangement_flow == "standard_cinematic":
+            if self.id in FLOW_ASSIGNMENTS:
+                self.arrangement_flow = FLOW_ASSIGNMENTS[self.id][0]
+                if not self.intro_lead_style:
+                    self.intro_lead_style = FLOW_ASSIGNMENTS[self.id][1]
+
+
+FLOW_ASSIGNMENTS: Dict[str, Tuple[str, str]] = {
+    "ladygaga_redone_electro": ("hook_first_explosion", "pokerface_stutter_hook"),
+    "mj_quincy_popfunk": ("drums_first_build", "mj_synclavier_rhodes"),
+    "brunomars_retrofunk": ("funk_vamp_drop", "brunomars_brass_stabs"),
+    "kanye_soulchop": ("staccato_strings_drop", "kanye_flashing_strings"),
+    "weeknd_maxmartin_synthwave": ("synthwave_driving_drop", "vintage_synthwave"),
+    "drdre_scottstorch_gfunk": ("piano_whistle_drop", "dre_storch_piano"),
+    "dualipa_nudisco": ("disco_pump_build", "dualipa_clavinet"),
+    "metroboomin_darktrap": ("dark_cinematic_drop", "metro_dark_bell"),
+}
+
+
+# Client-Facing Aesthetic Sonic Archetype Names & Vibes
+STYLE_DISPLAY_METADATA: Dict[str, Tuple[str, str]] = {
+    # Pop & Nu-Disco
+    "usher_liljon_crunk": ("Crunk Club Siren Riff", "Aggressive siren synth with heavy 808 sub hits"),
+    "ladygaga_redone_electro": ("Electro-Pop Supersaw", "Driving four-on-the-floor electro with wide supersaws"),
+    "mj_quincy_popfunk": ("80s Pop Synth Ostinato", "Walking 8th ostinato bass & sparkling FM electric piano"),
+    "weeknd_maxmartin_synthwave": ("Neon 80s Synthwave", "Arpeggiated driving pulse with lush Juno chorus leads"),
+    "dualipa_nudisco": ("Nu-Disco Club Pump", "16th-note root-octave disco pump & percussive clavinet"),
+    "brunomars_retrofunk": ("Retro Uptown Brass Funk", "Tight 3-piece horn stabs & syncopated slap bass"),
+
+    # Trap & Drill
+    "metroboomin_darktrap": ("Dark Cinematic Minor Trap", "Chilling piano chords with heavy sliding 808 subs"),
+    "southside_808mafia": ("Hard Drill Distortion", "Aggressive brass stabs & saturated sliding 808 glides"),
+    "travis_mikedean": ("Psychedelic Moog Odyssey", "Warm soaring Moog leads & distorted low-end distortion"),
+    "pierre_bourne": ("8-Bit Playful Chime Trap", "Airy melodic bell plucks & bouncy sub rhythm"),
+    "murda_beatz": ("Radio Trap Melodics", "Bright acoustic plucks with punchy rolling hats"),
+    "djmustard_ratchet": ("West Coast Ratchet Chants", "Minimal staccato piano plinks with snappy claps"),
+
+    # Hip-Hop & Lo-Fi
+    "drdre_scottstorch_gfunk": ("West Coast G-Funk Lead", "Soaring high sine whistle & staccato electric piano"),
+    "kanye_soulchop": ("Vintage Soul Sample-Chop", "Warm pitched vocal chops & punchy acoustic boom-bap"),
+    "timbaland_percussive": ("Percussive Beatbox Foley", "Organic foley mouth clicks & syncopated groove"),
+    "neptunes_minimalfunk": ("Dry Minimal Space Funk", "Sharp dry Triton guitar plucks & four-count start"),
+    "j_dilla_lofi": ("Swung MPC Vinyl Lo-Fi", "Dusty unquantized Rhodes keys & lazy swung snare"),
+    "nujabes_jazzhop": ("Atmospheric Jazzhop Chords", "Warm jazz piano chords, flute flutter & vinyl dust"),
+
+    # Rap & Electronic Bounce
+    "daftpunk_frenchtouch": ("French Touch Filter House", "Resonant low-pass sweeps & funky vocoder leads"),
+    "eminem_bassbrothers": ("Detroit Bounce Harpsichord", "Staccato minor harpsichord plink & punchy bassline"),
+    "kendrick_sounwave": ("Compton Cinematic Stabs", "Dark reverse piano & heavy dynamic rhythm"),
+    "run_dmc_rickrubin": ("80s Rock-Rap Power Chords", "Overdriven power guitar stabs & 808 boom"),
+    "mf_doom_villain": ("Vintage Comic Boom-Bap", "Dusty nostalgic cartoon horns & rugged drums"),
+
+    # Minimal & Atmospheric
+    "four_tet_textural": ("Organic Textural Micro-House", "Granular bell chimes & intricate organic clicks"),
+    "burial_futuregarage": ("Pitched Ghost Vocal Garage", "Vinyl crackle, eerie formant chops & 2-step shuffle"),
+    "aphex_twin_braindance": ("Braindance Acid Modular", "Squelchy 303 acid resonant sweeps & micro-edits"),
+    "jamie_xx_ukbass": ("UK Bass & Steel Pan Echoes", "Airy steel pans, warm sub swell & spacious delays"),
+    "bonobo_organic": ("Global Organic Down-Tempo", "Woodwind acoustics, warm kalimba & lush pads"),
+
+    # Rhythmic & Latin
+    "major_lazer_moombahton": ("Moombahton Screech Horns", "Pitch-scooping dancehall horns & 110 BPM dembow"),
+    "badbunny_tainy": ("Futuristic Reggaeton Dembow", "Melancholic chorus synth pads & syncopated perreo"),
+    "stromae_electrodance": ("European Melancholic Dance", "Punchy euro electro groove & introspective melody"),
+    "rosalia_el_guincho": ("Modern Flamenco Vocal Drop", "Staccato flamenco vocal resonance & handclaps"),
+    "santana_latinrock": ("Latin Rock Guitar & Congas", "Sustained melodic guitar leads & energetic congas"),
+
+    # Ambient Drone & Meditation
+    "brian_eno_generative": ("Generative Shimmer Ambient", "Infinite evolving granular drone & crystalline shimmer"),
+    "stars_of_the_lid": ("Harmonic Drone Symphony", "Slow multi-layer analog strings & deep meditative wash"),
+    "tim_hecker_frost": ("Digital Frost Texture", "Granular acoustic decay & frozen spectral resonance"),
+    "harold_budd_softpiano": ("Felt Piano Reverb Wash", "Muted soft-pedal piano notes in infinite reverberation"),
+    "aphex_saw2_dark": ("Deep Subterranean Drone", "Dark cavernous low rumble & hypnotic metallic pulse"),
+}
 
 
 # ==============================================================================
@@ -97,24 +183,24 @@ ARTIST_PROFILES: Dict[str, ArtistProfile] = {
         name="Michael Jackson & Quincy Jones (Pop Funk)",
         track_title_hint="Billie Jean / Thriller Pocket",
         genre="pop",
-        bpm_default=117.0,
-        bpm_min=110.0,
+        bpm_default=118.0,
+        bpm_min=116.0,
         bpm_max=120.0,
-        preferred_scales=["natural_minor", "dorian"],
+        preferred_scales=["dorian", "natural_minor"],
         progression_pool=[[1, 4, 1, 4], [1, 7, 4, 5], [1, 6, 7, 1]],
         groove_type="funk_pocket",
-        lead_style="mj_horn_stab",
-        bass_style="karplus_bass",
-        humanize_timing_ms=3.0,
-        lead_reverb=(0.45, 0.15),  # Light room reverb on horns only
+        lead_style="mj_synclavier_rhodes",
+        bass_style="billie_jean_ostinato",
+        humanize_timing_ms=0.0,  # Tight, unswung quantized pop groove
+        lead_reverb=(0.40, 0.14),
         lead_delay=(0.5, 0.18, 0.14),
         chord_q=20.0,
         chord_reverb=(0.55, 0.16),
-        bed_gain_mul=0.68,
-        melody_mix=0.96,
-        chord_mix=0.84,
-        bass_mix=1.04,
-        special_flags={"ghost_snare": True}
+        bed_gain_mul=0.55,
+        melody_mix=0.98,
+        chord_mix=0.82,
+        bass_mix=1.06,
+        special_flags={"tight_pocket": True}
     ),
     "weeknd_maxmartin_synthwave": ArtistProfile(
         id="weeknd_maxmartin_synthwave",
@@ -143,51 +229,52 @@ ARTIST_PROFILES: Dict[str, ArtistProfile] = {
     "dualipa_nudisco": ArtistProfile(
         id="dualipa_nudisco",
         name="Dua Lipa (Nu-Disco)",
-        track_title_hint="Levitating / Don't Start Now",
+        track_title_hint="Don't Start Now / Levitating",
         genre="pop",
-        bpm_default=108.0,
-        bpm_min=100.0,
-        bpm_max=112.0,
-        preferred_scales=["major", "mixolydian", "dorian"],
-        progression_pool=[[1, 5, 6, 4], [1, 4, 6, 5], [2, 5, 1, 6]],
+        bpm_default=124.0,
+        bpm_min=122.0,
+        bpm_max=126.0,
+        preferred_scales=["natural_minor", "dorian", "harmonic_minor"],
+        progression_pool=[[1, 7, 6, 7], [6, 4, 1, 5], [1, 4, 6, 5], [1, 6, 3, 7]],
         groove_type="disco_boots_cats",
         lead_style="dualipa_clavinet",
-        bass_style="karplus_bass",
-        humanize_timing_ms=2.0,
-        lead_reverb=(0.60, 0.18),  # Short bright plate reverb
+        bass_style="disco_octave_pump",
+        humanize_timing_ms=0.0,  # Rigid quantized club disco timing
+        lead_reverb=(0.50, 0.16),  # Tight snappy room
         lead_delay=(0.5, 0.22, 0.18),
         chord_q=18.0,
-        chord_reverb=(0.60, 0.18),
-        bed_gain_mul=0.66,
-        melody_mix=0.94,
+        chord_reverb=(0.55, 0.16),
+        bed_gain_mul=0.55,
+        melody_mix=0.96,
         chord_mix=0.88,
-        bass_mix=1.06,
-        special_flags={"boots_and_cats": True}
+        bass_mix=1.12,  # Heavy driving disco bass
+        special_flags={"boots_and_cats": True, "disco_octaves": True}
     ),
     "brunomars_retrofunk": ArtistProfile(
         id="brunomars_retrofunk",
         name="Bruno Mars (Retro Funk & Soul)",
-        track_title_hint="Uptown Funk / 24K Magic",
+        track_title_hint="24K Magic / Uptown Funk",
         genre="pop",
-        bpm_default=115.0,
-        bpm_min=112.0,
+        bpm_default=116.0,
+        bpm_min=114.0,
         bpm_max=118.0,
-        preferred_scales=["mixolydian", "major", "dorian"],
+        preferred_scales=["dorian", "blues", "mixolydian"],
         progression_pool=[[1, 4, 1, 4], [1, 7, 4, 5], [1, 5, 4, 1]],
         groove_type="live_funk_swung",
-        lead_style="brunomars_guitar_horns",
+        lead_style="brunomars_brass_stabs",
         bass_style="karplus_slap",
-        humanize_timing_ms=8.0,  # Key differentiator: +/-8ms live kit jitter!
-        lead_reverb=(0.62, 0.20),
+        humanize_timing_ms=8.0,  # Key differentiator: +/-8ms live funk kit jitter!
+        lead_reverb=(0.65, 0.22),
         lead_delay=(0.5, 0.20, 0.16),
         chord_q=22.0,
         chord_reverb=(0.65, 0.22),
-        bed_gain_mul=0.70,
-        melody_mix=0.96,
-        chord_mix=0.85,
+        bed_gain_mul=0.62,
+        melody_mix=1.05,  # Powerful central horn section
+        chord_mix=0.82,
         bass_mix=1.05,
-        special_flags={"analog_saturation": True, "live_jitter": True}
+        special_flags={"analog_saturation": True, "live_jitter": True, "funk_slap": True}
     ),
+
 
     # ── 2. GENRE: TRAP ────────────────────────────────────────────────────────
     "metroboomin_darktrap": ArtistProfile(
@@ -982,7 +1069,7 @@ def get_artist_by_id(artist_id: str) -> Optional[ArtistProfile]:
 
 def get_artists_for_genre(genre: str) -> List[ArtistProfile]:
     """Return all artist profiles registered under a given genre."""
-    g = (genre or "pop").lower()
+    g = (genre or "pop").lower().strip()
     # Normalize aliases
     if g in ["trap", "drill"]:
         target_genre = "trap"
@@ -994,7 +1081,7 @@ def get_artists_for_genre(genre: str) -> List[ArtistProfile]:
         target_genre = "rap"
     elif g in ["minimal", "house", "garage"]:
         target_genre = "minimal"
-    elif g in ["rhythmic", "energetic", "latin", "moombahton"]:
+    elif g in ["rhythmic", "energetic", "latin", "moombahton", "light_percussion", "percussion", "organic"]:
         target_genre = "rhythmic"
     elif g in ["none", "ambient"]:
         target_genre = "none"
@@ -1007,14 +1094,55 @@ def get_artists_for_genre(genre: str) -> List[ArtistProfile]:
     return matches
 
 
-def get_random_artist_for_genre(genre: str, rng: Optional[SeededRNG] = None) -> ArtistProfile:
+def get_random_artist_for_genre(
+    genre: str,
+    rng: Optional[SeededRNG] = None,
+    exclude_artist_ids: Optional[List[str]] = None,
+    preferred_artist_id: Optional[str] = None
+) -> Tuple[ArtistProfile, bool]:
     """
-    Select an artist profile for the given genre deterministically using the song's SeededRNG.
-    This guarantees reproducible song seeds while ensuring diverse, authentic styles.
+    Select an artist profile for the given genre.
+    Supports browser-driven 'bag without replacement' cycling:
+    - If preferred_artist_id is provided and valid, returns that artist directly.
+    - If exclude_artist_ids is provided, picks an artist that hasn't been played yet in the current cycle.
+    - When all artists for that genre have been played, the pool resets and cycle_reset=True is returned.
     """
-    artists = get_artists_for_genre(genre)
+    if preferred_artist_id and preferred_artist_id in ARTIST_PROFILES:
+        return ARTIST_PROFILES[preferred_artist_id], False
+
+    all_artists = get_artists_for_genre(genre)
+    excluded = set(exclude_artist_ids or [])
+
+    # Filter for unplayed artists in this genre
+    available = [a for a in all_artists if a.id not in excluded]
+
+    cycle_reset = False
+    if not available:
+        # All artists for this genre have been played! Reset the cycle.
+        available = all_artists
+        cycle_reset = True
+
     if rng is None:
-        idx = np.random.randint(0, len(artists))
+        idx = int(np.random.randint(0, len(available)))
     else:
-        idx = rng.randint(0, len(artists) - 1)
-    return artists[idx]
+        idx = rng.randint(0, len(available) - 1)
+
+    return available[idx], cycle_reset
+
+
+def get_all_styles_metadata() -> List[Dict[str, Any]]:
+    """Returns clean, client-facing metadata for all sonic style archetypes."""
+    res = []
+    for p in ARTIST_PROFILES.values():
+        res.append({
+            "id": p.id,
+            "display_name": p.display_name,
+            "vibe": p.vibe,
+            "genre": p.genre,
+            "bpm_default": p.bpm_default,
+            "bpm_min": p.bpm_min,
+            "bpm_max": p.bpm_max,
+            "scales": p.preferred_scales
+        })
+    return res
+

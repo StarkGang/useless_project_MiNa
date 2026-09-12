@@ -72,6 +72,10 @@ class JobRecord:
     custom_seed: Optional[int] = None
     num_candidates: Optional[int] = None
     target_duration: float = 30.0
+    vocal_mode: str = "auto"
+    played_artists: Optional[List[str]] = None
+    preferred_artist_id: Optional[str] = None
+
 
 
 class JobManager:
@@ -155,7 +159,10 @@ class JobManager:
         energy_preference: str = "low",
         custom_seed: Optional[int] = None,
         num_candidates: Optional[int] = None,
-        target_duration: float = 30.0
+        target_duration: float = 30.0,
+        vocal_mode: str = "auto",
+        played_artists: Optional[List[str]] = None,
+        preferred_artist_id: Optional[str] = None
     ) -> JobRecord:
         # Prune old files on each new job creation
         self.cleanup_old_files()
@@ -174,11 +181,15 @@ class JobManager:
             energy_preference=energy_preference,
             custom_seed=custom_seed,
             num_candidates=eff_cands,
-            target_duration=target_duration
+            target_duration=target_duration,
+            vocal_mode=vocal_mode,
+            played_artists=played_artists,
+            preferred_artist_id=preferred_artist_id
         )
         self.jobs[job_id] = job
         self._save_to_disk(job)
         return job
+
 
     def get_job(self, job_id: str) -> Optional[JobRecord]:
         job = self.jobs.get(job_id)
@@ -261,7 +272,22 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
             "chroma_energy": analysis.pitch.chroma_energy,
             "noisiness": analysis.texture.noisiness,
             "harmonicity": analysis.texture.harmonicity,
-            "temporal_entropy": analysis.texture.temporal_entropy
+            "temporal_entropy": analysis.texture.temporal_entropy,
+            "smart_profile": {
+                "primary_category": analysis.smart_profile.primary_category,
+                "display_title": analysis.smart_profile.display_title,
+                "detected_elements": analysis.smart_profile.detected_elements,
+                "has_speech_or_vocal": analysis.smart_profile.has_speech_or_vocal,
+                "has_humming": analysis.smart_profile.has_humming,
+                "has_beatbox": analysis.smart_profile.has_beatbox,
+                "has_traffic_or_engine": analysis.smart_profile.has_traffic_or_engine,
+                "has_foley_percussive": analysis.smart_profile.has_foley_percussive,
+                "has_ambient_bed": analysis.smart_profile.has_ambient_bed,
+                "autotune_enabled": analysis.smart_profile.autotune_enabled,
+                "autotune_strength": analysis.smart_profile.autotune_strength,
+                "settings_summary": analysis.smart_profile.smart_settings_summary,
+                "recommended_styles": analysis.smart_profile.recommended_styles
+            } if getattr(analysis, 'smart_profile', None) else None
         }
         job_manager.update_job(job_id, analysis=analysis_data, source_duration=prep.duration, progress=52)
 
@@ -273,9 +299,12 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
             base_seed=job.custom_seed,
             beat_preference=job.beat_preference,
             energy_preference=job.energy_preference,
+            vocal_mode=getattr(job, 'vocal_mode', 'auto'),
             num_candidates=cands_count,
             on_progress=progress_cb,
-            target_duration=job.target_duration
+            target_duration=job.target_duration,
+            played_artists=job.played_artists,
+            preferred_artist_id=job.preferred_artist_id
         )
 
         job_manager.update_job(job_id, stage="Finalizing audio stems & exporting WAV...", progress=98)
@@ -298,8 +327,20 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
                 "scale_name": cand.scale.name,
                 "scale_type": cand.scale.scale_type,
                 "form": cand.arrangement.selected_form,
+                "artist_name": cand.artist_name,
+                "artist_id": cand.artist_id,
+                "artist_track_hint": cand.artist_track_hint,
+                "style_name": getattr(cand, "style_name", cand.artist_name),
+                "style_desc": getattr(cand, "style_desc", cand.artist_track_hint),
+                "cycle_reset": getattr(cand, "cycle_reset", False),
                 "stems": cand.stems_info,
                 "palette": getattr(cand, "palette_info", {}),
+                "smart_profile": {
+                    "display_title": cand.smart_profile.display_title,
+                    "detected_elements": cand.smart_profile.detected_elements,
+                    "autotune_enabled": cand.smart_profile.autotune_enabled,
+                    "settings_summary": cand.smart_profile.smart_settings_summary
+                } if getattr(cand, "smart_profile", None) else None,
                 "score": {
                     "total": cand.score.total_score,
                     "source_usage_ratio": getattr(cand.score, "source_usage_ratio", 1.0),
@@ -316,6 +357,7 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
                 "audio_url": f"/api/audio/{job_id}/{idx}"
             }
             candidates_data.append(cand_info)
+
 
         # Winner is the first candidate in candidates_data (since candidates is sorted by score)
         winner_data = candidates_data[0]
@@ -351,7 +393,10 @@ async def submit_generation_job(
     energy_preference: str = "low",
     custom_seed: Optional[int] = None,
     num_candidates: Optional[int] = None,
-    target_duration: float = 30.0
+    target_duration: float = 30.0,
+    vocal_mode: str = "auto",
+    played_artists: Optional[List[str]] = None,
+    preferred_artist_id: Optional[str] = None
 ) -> str:
     """Create job and run in asyncio thread executor."""
     job = job_manager.create_job(
@@ -360,8 +405,12 @@ async def submit_generation_job(
         energy_preference=energy_preference,
         custom_seed=custom_seed,
         num_candidates=num_candidates,
-        target_duration=target_duration
+        target_duration=target_duration,
+        vocal_mode=vocal_mode,
+        played_artists=played_artists,
+        preferred_artist_id=preferred_artist_id
     )
+
 
     loop = asyncio.get_running_loop()
     if is_serverless:

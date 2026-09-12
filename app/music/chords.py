@@ -126,31 +126,36 @@ def generate_chord_voicing(scale: MusicalScale, degree: int, base_octave: int = 
 def select_chord_progression(
     scale: MusicalScale,
     rng: Optional[SeededRNG] = None,
-    genre_preference: Optional[str] = None
+    genre_preference: Optional[str] = None,
+    progression_pool: Optional[List[List[int]]] = None
 ) -> List[Chord]:
-    """Select and voice a procedural chord progression matched to the scale and genre."""
+    """Select and voice a procedural chord progression matched to the scale, genre, and artist profile."""
     if rng is None:
         rng = SeededRNG()
 
-    pref = (genre_preference or "").lower()
-    is_minor = "minor" in scale.scale_type or scale.scale_type in ["dorian", "phrygian", "blues"]
-
-    if pref in ["trap", "drill"]:
-        degrees = rng.choice(PROGRESSIONS_TRAP)
-    elif pref in ["pop", "dance", "synthpop"]:
-        degrees = rng.choice(PROGRESSIONS_POP)
-    elif pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
-        degrees = rng.choice(PROGRESSIONS_HIPHOP)
-    elif pref in ["rap", "electro", "french_touch"]:
-        degrees = rng.choice(PROGRESSIONS_RAP)
-    elif pref in ["minimal", "house", "garage"]:
-        degrees = rng.choice(PROGRESSIONS_MINIMAL)
-    elif pref in ["none", "ambient"]:
-        degrees = rng.choice(PROGRESSIONS_AMBIENT)
-    elif is_minor:
-        degrees = rng.choice(PROGRESSIONS_MINOR)
+    if progression_pool and len(progression_pool) > 0:
+        degrees = rng.choice(progression_pool)
     else:
-        degrees = rng.choice(PROGRESSIONS_MAJOR)
+        pref = (genre_preference or "").lower()
+        is_minor = "minor" in scale.scale_type or scale.scale_type in ["dorian", "phrygian", "blues"]
+
+        if pref in ["trap", "drill"]:
+            degrees = rng.choice(PROGRESSIONS_TRAP)
+        elif pref in ["pop", "dance", "synthpop"]:
+            degrees = rng.choice(PROGRESSIONS_POP)
+        elif pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
+            degrees = rng.choice(PROGRESSIONS_HIPHOP)
+        elif pref in ["rap", "electro", "french_touch"]:
+            degrees = rng.choice(PROGRESSIONS_RAP)
+        elif pref in ["minimal", "house", "garage"]:
+            degrees = rng.choice(PROGRESSIONS_MINIMAL)
+        elif pref in ["none", "ambient"]:
+            degrees = rng.choice(PROGRESSIONS_AMBIENT)
+        elif is_minor:
+            degrees = rng.choice(PROGRESSIONS_MINOR)
+        else:
+            degrees = rng.choice(PROGRESSIONS_MAJOR)
 
     chords = [generate_chord_voicing(scale, deg) for deg in degrees]
+
     return chords

@@ -1,6 +1,6 @@
 /**
  * THE UNNECESSARY FM — Spotify-Inspired Modern Audio Studio
- * 100% Pure DSP Procedural Music Generation Logic
+ * Procedural Music Generation Logic
  * Team MiNa • Midhun K M & Nayana P • TinkerHub Useless Projects 3.0
  */
 
@@ -59,10 +59,118 @@
 
   // Composition Directives Elements
   const beatSelect = document.getElementById('beatSelect');
+  const styleSelect = document.getElementById('styleSelect');
+  const styleCountHint = document.getElementById('styleCountHint');
   const energySelect = document.getElementById('energySelect');
   const seedInput = document.getElementById('seedInput');
   const btnRandomizeSeed = document.getElementById('btnRandomizeSeed');
   const btnGenerate = document.getElementById('btnGenerate');
+  const btnRerollArtist = document.getElementById('btnRerollArtist');
+  const bottomPlayerReroll = document.getElementById('bottomPlayerReroll');
+
+  // Vocal Extraction Mode Elements
+  const vocalModeSelect = document.getElementById('vocalModeSelect');
+  const vocalHelperNote = document.getElementById('vocalHelperNote');
+
+  let allAvailableStyles = [];
+
+  async function loadAvailableStyles() {
+    try {
+      const res = await fetch(buildUrl('/api/styles'));
+      if (!res.ok) return;
+      const data = await res.json();
+      allAvailableStyles = data.styles || [];
+      populateStyleDropdown();
+    } catch (err) {
+      console.warn('Failed to load styles metadata', err);
+    }
+  }
+
+  function populateStyleDropdown() {
+    if (!styleSelect) return;
+    const currentVal = styleSelect.value;
+    const selectedGenre = (beatSelect ? beatSelect.value : 'pop').toLowerCase();
+    let targetGenre = selectedGenre;
+    if (targetGenre === 'light_percussion') targetGenre = 'rhythmic';
+
+    // Preserve auto option
+    styleSelect.innerHTML = '<option value="" selected>🎲 Auto-Cycle (Surprise Me / Non-Repeating)</option>';
+
+    if (!allAvailableStyles || allAvailableStyles.length === 0) return;
+
+    // Filter styles strictly for current selected genre
+    const currentGenreStyles = allAvailableStyles.filter(s => s.genre === targetGenre);
+
+    // Extract clean genre display label
+    let genreClean = 'Pop';
+    if (beatSelect && beatSelect.selectedOptions && beatSelect.selectedOptions[0]) {
+      const fullText = beatSelect.selectedOptions[0].textContent;
+      genreClean = fullText.replace(/^[\p{Emoji}\s✨🥁🎺🎸🎷🎹⚡🪐🔥🎧🧩🌌🎵]+/gu, '').split('(')[0].trim() || targetGenre.toUpperCase();
+    }
+
+    if (styleCountHint) {
+      styleCountHint.textContent = `(${currentGenreStyles.length} ${genreClean} Styles)`;
+    }
+
+    if (styleHelperNote) {
+      styleHelperNote.textContent = `✨ Auto-cycles unplayed ${genreClean} styles dynamically on each roll`;
+    }
+
+    if (currentGenreStyles.length > 0) {
+      currentGenreStyles.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.display_name} (${s.bpm_default} BPM)`;
+        styleSelect.appendChild(opt);
+      });
+    }
+
+    // Only re-select if the value exists in this genre's filtered list
+    if (currentVal && Array.from(styleSelect.options).some(o => o.value === currentVal)) {
+      styleSelect.value = currentVal;
+    }
+  }
+
+  if (styleSelect) {
+    styleSelect.addEventListener('change', () => {
+      const chosenId = styleSelect.value;
+      if (!chosenId) return;
+      const match = allAvailableStyles.find(s => s.id === chosenId);
+      if (match && beatSelect && beatSelect.value !== match.genre) {
+        beatSelect.value = match.genre;
+      }
+    });
+  }
+
+  if (beatSelect) {
+    beatSelect.addEventListener('change', () => {
+      populateStyleDropdown();
+    });
+  }
+
+  function triggerStyleRoll() {
+    if (!currentJobId && !currentFile) {
+      showToast('Please upload or record audio first!', 'info', 'NO AUDIO');
+      return;
+    }
+    // Set style selector back to auto-cycle so it rolls an unplayed style!
+    if (styleSelect) {
+      styleSelect.value = '';
+    }
+    showToast('Rolling next sound style...', 'info', 'STYLE ROLL');
+    submitMusicGeneration();
+  }
+
+  if (btnRerollArtist) {
+    btnRerollArtist.addEventListener('click', triggerStyleRoll);
+  }
+  if (bottomPlayerReroll) {
+    bottomPlayerReroll.addEventListener('click', triggerStyleRoll);
+  }
+
+  // Load styles immediately on page init
+  loadAvailableStyles();
+
 
   // Sound Guide Tooltip Toggle (supports mobile tap & keyboard Escape)
   const soundGuideInfoBtn = document.getElementById('soundGuideInfoBtn');
@@ -80,6 +188,26 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         soundGuideTooltipWrap.classList.remove('active');
+      }
+    });
+  }
+
+  // Sound Style Archetype Info Tooltip Toggle (supports tap & keyboard Escape)
+  const styleInfoBtn = document.getElementById('styleInfoBtn');
+  const styleInfoTooltipWrap = document.getElementById('styleInfoTooltipWrap');
+  if (styleInfoBtn && styleInfoTooltipWrap) {
+    styleInfoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      styleInfoTooltipWrap.classList.toggle('active');
+    });
+    document.addEventListener('click', (e) => {
+      if (!styleInfoTooltipWrap.contains(e.target)) {
+        styleInfoTooltipWrap.classList.remove('active');
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        styleInfoTooltipWrap.classList.remove('active');
       }
     });
   }
@@ -429,7 +557,7 @@
     if (playerTrackSubtitle) playerTrackSubtitle.textContent = 'Uploaded Audio • Ready to Compose';
     if (libSourceTitle) libSourceTitle.textContent = file.name;
 
-    showToast(`Loaded "${file.name}". Ready to compose 30s music!`, 'success', 'AUDIO READY');
+    showToast(`Loaded "${file.name}". Ready to compose ${selectedDuration}s music!`, 'success', 'AUDIO READY');
   }
 
   function resetFileInput() {
@@ -613,7 +741,10 @@
     card.addEventListener('click', () => {
       const g = card.dataset.genre;
       const e = card.dataset.energy;
-      if (g && beatSelect) beatSelect.value = g;
+      if (g && beatSelect) {
+        beatSelect.value = g;
+        populateStyleDropdown();
+      }
       if (e && energySelect) {
         energySelect.value = e;
         if (energyHelperNote) energyHelperNote.textContent = energyDescriptions[e] || '';
@@ -647,6 +778,7 @@
       const genre = chip.dataset.genre;
       if (genre && beatSelect) {
         beatSelect.value = genre;
+        populateStyleDropdown();
         document.querySelectorAll('.mode-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
         showToast(`Genre directive set: ${chip.textContent.trim()}`, 'success', 'GENRE DIRECTIVE');
@@ -713,6 +845,10 @@
         btnDur60.setAttribute('aria-pressed', 'false');
       }
       if (generateBtnLabel) generateBtnLabel.textContent = 'CREATE MUSIC (30s)';
+      if (playerTotalDuration && (!currentResultData || !currentResultData.winner)) playerTotalDuration.textContent = '00:30';
+      if (libTrackMeta && (!currentResultData || !currentResultData.winner)) {
+        libTrackMeta.textContent = 'Your Produced Tune (30s)';
+      }
     });
   }
   if (btnDur60) {
@@ -725,7 +861,58 @@
         btnDur30.setAttribute('aria-pressed', 'false');
       }
       if (generateBtnLabel) generateBtnLabel.textContent = 'CREATE MUSIC (60s)';
+      if (playerTotalDuration && (!currentResultData || !currentResultData.winner)) playerTotalDuration.textContent = '01:00';
+      if (libTrackMeta && (!currentResultData || !currentResultData.winner)) {
+        libTrackMeta.textContent = 'Your Produced Tune (60s)';
+      }
     });
+  }
+
+  // Vocal Mode Select (Smart Auto / Lead Vocal / Chops)
+  if (vocalModeSelect) {
+    vocalModeSelect.addEventListener('change', () => {
+      const mode = vocalModeSelect.value;
+      if (vocalHelperNote) {
+        if (mode === 'lead') {
+          vocalHelperNote.textContent = '🎙️ Plays your full recording in 100% continuous chronological order, zero chopping & studio vocal chain';
+        } else if (mode === 'chops') {
+          vocalHelperNote.textContent = '✂️ Slices vocal input into fast, syncopated soul chops & rhythmic riffs';
+        } else {
+          vocalHelperNote.textContent = '✨ Automatically plays continuous unbroken vocals without cutting off words or chopping';
+        }
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // BROWSER LOCALSTORAGE ARTIST CYCLING MANAGER ("Bag Without Replacement")
+  // Stores played history strictly in user's browser localStorage (zero server files)
+  // ---------------------------------------------------------------------------
+  const PLAYED_ARTISTS_STORAGE_KEY = 'unnecessaryfm_played_artists';
+
+  function getPlayedArtistsMap() {
+    try {
+      const raw = localStorage.getItem(PLAYED_ARTISTS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function recordPlayedArtist(genre, artistId, cycleReset) {
+    if (!genre || !artistId) return;
+    try {
+      const g = genre.toLowerCase();
+      let map = getPlayedArtistsMap();
+      if (cycleReset || !Array.isArray(map[g])) {
+        map[g] = [artistId];
+      } else if (!map[g].includes(artistId)) {
+        map[g].push(artistId);
+      }
+      localStorage.setItem(PLAYED_ARTISTS_STORAGE_KEY, JSON.stringify(map));
+    } catch (e) {
+      console.warn("localStorage artist tracking error", e);
+    }
   }
 
   async function submitMusicGeneration() {
@@ -746,12 +933,26 @@
       formData.append('existing_job_id', currentJobId);
     }
 
-    formData.append('beat_preference', beatSelect ? beatSelect.value : 'pop');
+    const selectedGenre = beatSelect ? beatSelect.value : 'pop';
+    formData.append('beat_preference', selectedGenre);
     formData.append('energy_preference', energySelect ? energySelect.value : 'low');
     formData.append('duration_seconds', String(selectedDuration));
+    formData.append('vocal_mode', (vocalModeSelect ? vocalModeSelect.value : 'auto'));
     if (seedInput && seedInput.value.trim()) {
       formData.append('seed', seedInput.value.trim());
     }
+
+    // If a specific style is selected, pass preferred_artist_id; otherwise pass played list for auto-cycling
+    if (styleSelect && styleSelect.value) {
+      formData.append('preferred_artist_id', styleSelect.value);
+    } else {
+      const playedMap = getPlayedArtistsMap();
+      const playedList = playedMap[selectedGenre.toLowerCase()] || [];
+      if (playedList.length > 0) {
+        formData.append('played_artists', playedList.join(','));
+      }
+    }
+
 
     try {
       const response = await fetch(buildUrl('/api/generate'), {
@@ -799,8 +1000,10 @@
   const README_QUOTES = [
     `"The world is full of perfectly ordinary noises, but for some reason, they aren't songs. We decided this was unacceptable."`,
     `"Unnecessary FM turns ordinary noises into songs. Because apparently, being a noise wasn't enough."`,
-    `"Extracting frequency, rhythm, pitch & texture → dividing into impacts, pulses, movements & drones."`,
-    `"Synthesizing the composition, scoring dynamic range & spectral balance, and mastering the winner."`
+    `"Wish these loud honking noises would become music instead! And can you believe it, that's when we had this eureka moment."`,
+    `"We've been shouting hello, hi, bye into laptop mics, capturing clapping noises, and laughing as our algorithms turn it into tunes!"`,
+    `"Doing wizard math on sound waves with frequency filters and beat grids!"`,
+    `"Extracting the soul of that noise, and turning it into something, uhh, pleasing? Almost ready!"`
   ];
 
   let activeEventSource = null;
@@ -962,8 +1165,10 @@
       renderCompositionUI(currentResultData);
       if (isNewGeneration) {
         const candCount = (currentResultData.candidates && currentResultData.candidates.length) || 1;
-        const dur = (currentResultData.source && currentResultData.source.duration) ? Math.round(currentResultData.source.duration) : 30;
-        showToast(`${dur}-second music composition synthesized across ${candCount} candidate${candCount > 1 ? 's' : ''}!`, 'success', 'TA DAA!');
+        const winnerDur = (currentResultData.winner && currentResultData.winner.duration)
+          ? Math.round(currentResultData.winner.duration)
+          : selectedDuration;
+        showToast(`${winnerDur}-second music composition synthesized across ${candCount} candidate${candCount > 1 ? 's' : ''}!`, 'success', 'TA DAA!');
       }
 
     } catch (err) {
@@ -980,7 +1185,14 @@
 
     // Populate DNA Panel
     const analysis = result.source.analysis || {};
-    if (catPill) catPill.textContent = analysis.classification || 'TEXTURAL';
+    const sp = analysis.smart_profile || (result.candidates && result.candidates[0] && result.candidates[0].smart_profile) || null;
+    if (catPill) {
+      if (sp && sp.display_title) {
+        catPill.textContent = sp.display_title.toUpperCase();
+      } else {
+        catPill.textContent = analysis.classification || 'TEXTURAL';
+      }
+    }
 
     const rDens = analysis.rhythmic_density || 0;
     if (meterRhythm) meterRhythm.style.width = `${Math.min(100, rDens * 35)}%`;
@@ -1002,7 +1214,11 @@
       dnaDetectedPitch.textContent = analysis.has_reliable_pitch ? `${analysis.nearest_note}` : 'None (Resonators Applied)';
     }
     if (dnaClassReason) {
-      dnaClassReason.textContent = (analysis.reasons && analysis.reasons.length > 0) ? analysis.reasons[0] : 'Balanced harmonic & transient spectrum';
+      if (sp && sp.settings_summary) {
+        dnaClassReason.innerHTML = `<strong>Smart DSP:</strong> ${sp.settings_summary}`;
+      } else {
+        dnaClassReason.textContent = (analysis.reasons && analysis.reasons.length > 0) ? analysis.reasons[0] : 'Balanced harmonic & transient spectrum';
+      }
     }
 
     // Source Audio Setup
@@ -1077,7 +1293,41 @@
     if (dnaPaletteSlices) {
       const pal = cand.palette || {};
       const tot = pal.total_slices || 48;
-      dnaPaletteSlices.textContent = `${tot} slices (${pal.impacts || 0} impacts, ${pal.pulses || 0} pulses, ${pal.movements || 0} movements, ${pal.ambience || 0} beds)`;
+      const extraCounts = [];
+      if (pal.full_vocal_phrases) extraCounts.push(`${pal.full_vocal_phrases} full phrases`);
+      if (pal.beatbox_kicks) extraCounts.push(`${pal.beatbox_kicks} mouth kicks`);
+      if (pal.beatbox_snares) extraCounts.push(`${pal.beatbox_snares} mouth snares`);
+      if (pal.traffic_horns) extraCounts.push(`${pal.traffic_horns} horns`);
+      if (pal.humming_slices) extraCounts.push(`${pal.humming_slices} hums`);
+      if (pal.vocal_chops) extraCounts.push(`${pal.vocal_chops} vocal chops`);
+      const extraStr = extraCounts.length > 0 ? ` (${extraCounts.slice(0, 3).join(', ')})` : ` (${pal.impacts || 0} impacts, ${pal.pulses || 0} pulses, ${pal.ambience || 0} beds)`;
+      dnaPaletteSlices.textContent = `${tot} slices${extraStr}`;
+    }
+
+    // Update Smart Extraction Banner & DNA Smart DSP
+    const smartP = cand.smart_profile || (currentResultData.source && currentResultData.source.analysis && currentResultData.source.analysis.smart_profile) || null;
+    const smartBanner = document.getElementById('smartExtractionBanner');
+    const smartTitle = document.getElementById('smartExtractionTitle');
+    const smartDetails = document.getElementById('smartExtractionDetails');
+    const dnaSmartExtraction = document.getElementById('dnaSmartExtraction');
+
+    const isLeadVocal = cand.stems && cand.stems['Vocal Hook'] && cand.stems['Vocal Hook'].includes('Lead Vocal');
+
+    if (smartP || isLeadVocal) {
+      if (smartBanner) smartBanner.classList.remove('hidden');
+      if (smartTitle) {
+        smartTitle.textContent = isLeadVocal ? '🎙️ Lead Vocal Mode (Full Lyrics & Auto-Tune)' : (smartP ? smartP.display_title : 'Smart Audio Extraction');
+      }
+      if (smartDetails) {
+        const leadPrefix = isLeadVocal ? '✨ Full phrases & lyrics preserved without cutoff, auto-tuned to track scale • ' : '';
+        smartDetails.textContent = leadPrefix + (smartP ? smartP.settings_summary : 'Scale Auto-Tuned Lead Vocal active');
+      }
+      if (dnaSmartExtraction) {
+        dnaSmartExtraction.textContent = isLeadVocal ? '🎙️ Lead Vocal: Full Phrases & Words Intact' : (smartP ? smartP.settings_summary : 'Scale Auto-Tuner Active');
+      }
+    } else {
+      if (smartBanner) smartBanner.classList.add('hidden');
+      if (dnaSmartExtraction) dnaSmartExtraction.textContent = 'Standard Multi-Scale Leveling';
     }
 
     // Update Stem Architecture Breakdown Cards
@@ -1090,6 +1340,21 @@
     if (stemBassDesc && stems.Bass) stemBassDesc.textContent = stems.Bass;
 
     updateABUI('result');
+
+    // Update Sound Archetype Card in Banner and record to browser localStorage
+    const metaArtist = document.getElementById('metaArtist');
+    const styleDisplayName = cand.style_name || cand.artist_name || 'Sound Archetype';
+    const styleDisplayDesc = cand.style_desc || cand.artist_track_hint || 'Procedural Acoustic Modeling';
+
+    if (metaArtist) {
+      metaArtist.textContent = styleDisplayName;
+      metaArtist.title = `Vibe: ${styleDisplayDesc}`;
+    }
+
+    const genreKey = (currentResultData.settings && currentResultData.settings.beat_preference) || (beatSelect ? beatSelect.value : 'pop');
+    if (cand.artist_id) {
+      recordPlayedArtist(genreKey, cand.artist_id, cand.cycle_reset);
+    }
 
     // Set Audio Player
     const candUrl = buildUrl(cand.audio_url);
@@ -1105,16 +1370,24 @@
 
     // Update Bottom Player & Right Panel
     const trackName = `Candidate ${letter} ${cand.is_winner ? '[Winner]' : ''}`;
-    const trackSub = `${cand.scale_name} • ${cand.tempo_bpm} BPM • ${cand.form}`;
+    const candDur = cand.duration || selectedDuration;
+    const trackSub = `${styleDisplayName} • ${cand.tempo_bpm} BPM • ${cand.scale_name}`;
     if (playerTrackTitle) playerTrackTitle.textContent = trackName;
     if (playerTrackSubtitle) playerTrackSubtitle.textContent = trackSub;
     if (rightPanelTrackTitle) rightPanelTrackTitle.textContent = trackName;
-    if (rightPanelTrackSub) rightPanelTrackSub.textContent = `Procedural Composition • ${cand.tempo_bpm} BPM`;
+    if (rightPanelTrackSub) {
+      rightPanelTrackSub.textContent = `Vibe: ${styleDisplayDesc} • ${cand.tempo_bpm} BPM`;
+    }
     if (libTrackTitle) libTrackTitle.textContent = trackName;
-    if (libTrackMeta) libTrackMeta.textContent = `${cand.scale_name} • ${cand.tempo_bpm} BPM`;
+    if (libTrackMeta) libTrackMeta.textContent = `${cand.scale_name} • ${cand.tempo_bpm} BPM (${Math.round(candDur)}s)`;
+
+    if (playerTotalDuration) playerTotalDuration.textContent = formatTime(candDur);
+    if (playerCurrentTime) playerCurrentTime.textContent = '0:00';
+    if (resTimeDisplay) resTimeDisplay.textContent = `0:00 / ${formatTime(candDur)}`;
 
     // Reset Play Buttons
     resetResultPlayState();
+
 
     // Draw Result Waveform in Spotify Green
     drawWaveformFromUrl(candUrl, resWaveformCanvas, '#1ed760');
@@ -1145,7 +1418,13 @@
 
     const p = getActiveAudioPlayer();
     const cur = p.currentTime || 0;
-    const dur = p.duration || 30;
+    const candDur = (currentResultData && currentResultData.candidates && currentResultData.candidates[activeCandidateIndex])
+      ? currentResultData.candidates[activeCandidateIndex].duration
+      : selectedDuration;
+    const fallbackDur = (activePlayingTarget === 'result')
+      ? candDur
+      : ((currentResultData && currentResultData.source && currentResultData.source.duration) ? currentResultData.source.duration : 10);
+    const dur = (p.duration && !isNaN(p.duration) && p.duration > 0) ? p.duration : fallbackDur;
     const pct = dur > 0 ? Math.max(0, Math.min(100, (cur / dur) * 100)) : 0;
 
     if (!isScrubbing) {
@@ -1170,6 +1449,23 @@
       rafId = null;
     }
   }
+
+  // Audio loadedmetadata listeners to sync duration as soon as audio decodes
+  resultAudioPlayer.addEventListener('loadedmetadata', () => {
+    const d = resultAudioPlayer.duration;
+    if (d && !isNaN(d) && d > 0 && activePlayingTarget === 'result') {
+      if (playerTotalDuration) playerTotalDuration.textContent = formatTime(d);
+      if (resTimeDisplay) resTimeDisplay.textContent = `${formatTime(resultAudioPlayer.currentTime || 0)} / ${formatTime(d)}`;
+    }
+  });
+
+  sourceAudioPlayer.addEventListener('loadedmetadata', () => {
+    const d = sourceAudioPlayer.duration;
+    if (d && !isNaN(d) && d > 0 && activePlayingTarget === 'source') {
+      if (playerTotalDuration) playerTotalDuration.textContent = formatTime(d);
+      if (srcTimeDisplay) srcTimeDisplay.textContent = `${formatTime(sourceAudioPlayer.currentTime || 0)} / ${formatTime(d)}`;
+    }
+  });
 
   sourceAudioPlayer.addEventListener('play', startPlayheadRAF);
   resultAudioPlayer.addEventListener('play', startPlayheadRAF);

@@ -121,11 +121,21 @@ def analyze_pitch(audio: np.ndarray, sr: int = 44100) -> PitchFeatures:
             best_rel_lag = int(np.argmax(search_zone))
             peak_val = float(search_zone[best_rel_lag])
             best_lag = min_lag + best_rel_lag
-            if peak_val > 0.45 and best_lag > 0:
-                fundamental_hz = float(sr / best_lag)
-                pitch_confidence = float(np.clip((peak_val - 0.45) / 0.55, 0.0, 1.0))
-                if 50.0 <= fundamental_hz <= 1200.0:
+            if peak_val >= 0.58 and best_lag > 0:
+                calc_f0 = float(sr / best_lag)
+                calc_conf = float(np.clip((peak_val - 0.50) / 0.50, 0.0, 1.0))
+                if 50.0 <= calc_f0 <= 1200.0 and calc_conf >= 0.35:
+                    fundamental_hz = calc_f0
+                    pitch_confidence = calc_conf
                     has_reliable_pitch = True
+                else:
+                    fundamental_hz = 0.0
+                    pitch_confidence = calc_conf
+                    has_reliable_pitch = False
+            else:
+                fundamental_hz = 0.0
+                pitch_confidence = float(np.clip((peak_val - 0.50) / 0.50, 0.0, 1.0)) if peak_val > 0.50 else 0.0
+                has_reliable_pitch = False
 
     # Nearest note
     if has_reliable_pitch and fundamental_hz > 0:

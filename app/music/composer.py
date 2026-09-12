@@ -17,6 +17,7 @@ import numpy as np
 from scipy import signal
 
 from ..dsp.analysis import CompleteAnalysis
+from ..dsp.autotune import auto_tune_slice, auto_tune_continuous_phrase, harmonize_vocal_slice, get_scale_midi_notes
 from ..dsp.effects import (
     apply_panning,
     master_audio,
@@ -26,7 +27,7 @@ from ..dsp.effects import (
 )
 from ..dsp.filters import design_biquad_lowpass, apply_filter, resonant_filter_bank
 from ..dsp.granular import create_granular_pad
-from ..dsp.pitch import midi_to_hz
+from ..dsp.pitch import midi_to_hz, hz_to_midi
 from ..dsp.preprocess import PreprocessedAudio
 from ..dsp.segmentation import (
     AudioSlice,
@@ -34,7 +35,8 @@ from ..dsp.segmentation import (
     build_source_palette,
     apply_slice_envelope,
     normalize_slice_rms,
-    apply_fade
+    apply_fade,
+    dehiss_audio
 )
 from ..dsp.synthesis import (
     render_karplus_strong_noise_note,
@@ -46,7 +48,8 @@ from ..dsp.synthesis import (
     render_noise_kick,
     render_noise_open_hihat,
     render_noise_riser,
-    render_noise_snare
+    render_noise_snare,
+    render_pitched_vocal_chop
 )
 from ..utils.random import SeededRNG, generate_seed
 from .artist_profiles import ArtistProfile, get_random_artist_for_genre, get_artist_by_id
@@ -103,6 +106,11 @@ class CompositionResult:
     artist_name: str = ""
     artist_id: str = ""
     artist_track_hint: str = ""
+    cycle_reset: bool = False
+    style_name: str = ""
+    style_desc: str = ""
+    smart_profile: Optional[Any] = None
+
 
 
 def _tile_or_loop_bed(slices: List[AudioSlice], target_samples: int, sr: int, rng: SeededRNG) -> np.ndarray:
@@ -169,10 +177,13 @@ def render_candidate_composition(
     seed: int,
     beat_preference: str = "pop",
     energy_preference: str = "low",
+    vocal_mode: str = "auto",
     palette: Optional[SourcePalette] = None,
     shared_pad: Optional[np.ndarray] = None,
     on_progress: Optional[Any] = None,
-    target_duration: float = 30.0
+    target_duration: float = 30.0,
+    exclude_artist_ids: Optional[List[str]] = None,
+    preferred_artist_id: Optional[str] = None
 ) -> CompositionResult:
     """
     Renders a complete musical composition (30s or 60s) with punchy beats,
@@ -188,17 +199,24 @@ def render_candidate_composition(
             audio=prep.mono,
             sr=sr,
             onset_samples=analysis.rhythm.onset_samples,
-            target_slice_count=48
+            target_slice_count=48,
+            smart_profile=getattr(analysis, 'smart_profile', None)
         )
 
     # 2. Select Iconic Artist Archetype & Musical Scale
-    artist_profile = get_random_artist_for_genre(beat_preference, rng=rng)
+    artist_profile, cycle_reset = get_random_artist_for_genre(
+        beat_preference,
+        rng=rng,
+        exclude_artist_ids=exclude_artist_ids,
+        preferred_artist_id=preferred_artist_id
+    )
     scale = select_scale(
         brightness=analysis.spectral.brightness,
         noisiness=analysis.texture.noisiness,
         candidate_root_notes=analysis.pitch.candidate_notes,
         rng=rng,
-        genre_preference=beat_preference
+        genre_preference=beat_preference,
+        preferred_scale_types=artist_profile.preferred_scales
     )
 
     # 3. Select Musical Tempo (BPM tailored to Artist Profile)
@@ -215,7 +233,8 @@ def render_candidate_composition(
         source_energy_envelope=analysis.amplitude.envelope_curve,
         sonic_character=analysis.classification,
         rng=rng,
-        target_sec=target_duration
+        target_sec=target_duration,
+        flow_archetype=artist_profile.arrangement_flow
     )
     total_duration = arrangement.total_duration
     total_samples = int(total_duration * sr)
@@ -233,8 +252,13 @@ def render_candidate_composition(
     _chord_mix      = artist_profile.chord_mix
     _bass_mix       = artist_profile.bass_mix
 
-    # 5. Generate Chord Progression & Melodic Hook (Genre-adapted)
-    chords = select_chord_progression(scale, rng=rng, genre_preference=beat_preference)
+    # 5. Generate Chord Progression & Melodic Hook (Genre & Artist adapted)
+    chords = select_chord_progression(
+        scale,
+        rng=rng,
+        genre_preference=beat_preference,
+        progression_pool=artist_profile.progression_pool
+    )
     melody_events = sequence_melody(
         scale=scale,
         total_bars=arrangement.total_bars,
@@ -258,20 +282,132 @@ def render_candidate_composition(
     # 7. Low-Memory Direct Accumulation Mix Buffer (shape: 2, total_samples)
     mix = np.zeros((2, total_samples), dtype=np.float32)
 
-    # --- STEM 1: ATMOSPHERIC SOURCE BED (Full Timeline Chronological Traversal) ---
-    bed_source_slices = palette.chronological_slices if palette.chronological_slices else (palette.ambience or palette.drones)
+    # 7.5. Compute Scale MIDI Notes & Retrieve Smart Source Profile
+    smart_profile = getattr(analysis, 'smart_profile', None)
+    scale_midis = get_scale_midi_notes(getattr(scale, 'root_name', 'C'), getattr(scale, 'intervals', [0, 2, 4, 5, 7, 9, 11]))
+
+    is_vocal_source = bool(
+        smart_profile and (
+            getattr(smart_profile, 'has_speech_or_vocal', False)
+            or getattr(smart_profile, 'has_humming', False)
+            or getattr(smart_profile, 'primary_category', '') == "VOCAL"
+        )
+    )
+    is_lead_vocal_mode = bool(
+        is_vocal_source and (
+            (vocal_mode in ("lead", "full_phrase"))
+            or (vocal_mode == "auto" and len(getattr(palette, 'full_vocal_phrases', [])) > 0)
+        )
+    )
+
+    # --- STEM 0: INTRO PRODUCER TAG / ANCHOR HOOK (The Psychological Anchor) ---
+    # In Lead Vocal Mode: suppress intro snippet to avoid out-of-order chopped words.
+    # In other modes: plays a brief, musical, filtered teaser that sweeps straight into the beat!
+    intro_sec = next((s for s in arrangement.sections if "source_tag" in s.active_layers), arrangement.sections[0])
+    if intro_sec and not is_lead_vocal_mode:
+        # Keep anchor teaser very brief (0.8s - 1.2s max) and musical - never let raw noise play solo!
+        tag_dur = min(intro_sec.duration * 0.35, 1.2)
+        tag_samples = int(tag_dur * sr)
+        tag_audio = None
+        if not is_vocal_source:
+            # If traffic horns or tonal impacts are available, use the best horn or crisp onset
+            if getattr(palette, 'traffic_horns', None) and len(palette.traffic_horns[0].audio) > 0:
+                tag_audio = palette.traffic_horns[0].audio[:tag_samples]
+            elif palette.impacts and len(palette.impacts[0].audio) > 0:
+                tag_audio = palette.impacts[0].audio[:tag_samples]
+            elif len(prep.mono) >= tag_samples:
+                tag_audio = prep.mono[:tag_samples]
+            else:
+                tag_audio = prep.mono
+        else:
+            _intro_phrases = getattr(palette, 'full_vocal_phrases', [])
+            if _intro_phrases:
+                _best_p = max(_intro_phrases, key=lambda p: p.duration)
+                tag_audio = _best_p.audio
+            elif palette.vocal_chops:
+                tag_audio = palette.vocal_chops[0].audio
+            elif len(prep.mono) >= tag_samples:
+                tag_audio = prep.mono[:tag_samples]
+            else:
+                tag_audio = prep.mono
+
+        if tag_audio is not None and len(tag_audio) > 0:
+            clean_tag = dehiss_audio(tag_audio, sr=sr, high_cut_hz=6800.0, gate_threshold_db=-36.0)
+            clean_tag = normalize_slice_rms(clean_tag, target_rms=0.10)
+            # Auto-tune the intro producer tag to the song's root key if vocal/speech/hum or horn
+            if smart_profile and getattr(smart_profile, 'autotune_enabled', False):
+                if len(clean_tag) > int(0.4 * sr):
+                    clean_tag = auto_tune_continuous_phrase(clean_tag, scale_midis=scale_midis, sr=sr, strength=1.0)
+                else:
+                    clean_tag, _, _ = auto_tune_slice(clean_tag, scale_midis=scale_midis, strength=1.0, sr=sr)
+
+            tl = min(len(clean_tag), tag_samples, total_samples)
+            if tl > 64:
+                tag_fade_in = min(int(0.02 * sr), tl // 6)
+                tag_fade_out = min(int(0.12 * sr), tl // 3)
+                tag_chunk = clean_tag[:tl].copy()
+                if tag_fade_in > 1:
+                    tag_chunk[:tag_fade_in] *= (0.5 - 0.5 * np.cos(np.linspace(0, np.pi, tag_fade_in, dtype=np.float32)))
+                if tag_fade_out > 1:
+                    t_fo = np.linspace(0, 1, tag_fade_out, dtype=np.float32)
+                    tag_chunk[-tag_fade_out:] *= (1.0 - t_fo) ** 1.5
+
+                # DJ highpass sweep into the beat
+                if not is_vocal_source and tl > int(0.25 * sr):
+                    try:
+                        b_sw, a_sw = signal.butter(1, min(0.35, 300.0 / (sr * 0.5)), btype='high')
+                        tag_chunk = signal.lfilter(b_sw, a_sw, tag_chunk)
+                    except Exception:
+                        pass
+
+                tag_level = 0.32 if not is_vocal_source else 0.48
+                mix[0, :tl] += tag_chunk * tag_level
+                mix[1, :tl] += tag_chunk * tag_level
+
+    # --- STEM 1: ATMOSPHERIC SOURCE BED (With Tempo-Synced Sidechain Pumping) ---
+    # In Lead Vocal Mode: use purely non-vocal ambience/drones so the lead voice is never whispered/pumped in the background!
+    if is_lead_vocal_mode:
+        non_vocal = [s for s in (palette.ambience + palette.drones + palette.textures) if getattr(s, "role", "") not in ("VOCAL_PHRASE", "VOCAL_CHOP")]
+        bed_source_slices = non_vocal if non_vocal else (palette.ambience or palette.drones)
+    else:
+        bed_source_slices = palette.chronological_slices if palette.chronological_slices else (palette.ambience or palette.drones)
     raw_bed = _tile_or_loop_bed(bed_source_slices, total_samples, sr, rng=rng)
+
+    # CRUCIAL AUDIO POLISH FOR ENVIRONMENTAL / TRAFFIC NOISE:
+    # 1. Bandpass filter to remove muddy sub-bass rumble (< 220 Hz) and harsh screech/wind (> 3000 Hz)
+    try:
+        nyq = sr * 0.5
+        b_bp, a_bp = signal.butter(2, [220.0 / nyq, min(0.85, 3000.0 / nyq)], btype='bandpass')
+        raw_bed[0] = signal.lfilter(b_bp, a_bp, raw_bed[0])
+        raw_bed[1] = signal.lfilter(b_bp, a_bp, raw_bed[1])
+    except Exception:
+        pass
+
+    # 2. Subtle stereo widening to keep center channel punchy and clear for kick, bass, and chords!
+    d_samp = min(int(0.012 * sr), raw_bed.shape[1] - 1)
+    if d_samp > 0:
+        raw_bed[1, d_samp:] = 0.85 * raw_bed[1, d_samp:] + 0.15 * raw_bed[0, :-d_samp]
 
     bed_gain_curve = np.zeros(total_samples, dtype=np.float32)
     ramp_len = int(0.035 * sr)
     for i, sec in enumerate(arrangement.sections):
         s_start = int(sec.start_time * sr)
         s_end = min(total_samples, int((sec.start_time + sec.duration) * sr))
-        target_gain = (0.50 + 0.30 * sec.energy_level) * _bed_gain_mul
+
+        # Bed must be a subtle, warm background texture (gain: 0.03 to 0.055), NEVER a loud roaring traffic wash!
+        # In drops/choruses (high energy), dip the bed lower so the musical drop hits with maximum punch!
+        is_high_energy = sec.energy_level > 0.80 or "Chorus" in sec.name or "Drop" in sec.name or "Climax" in sec.name
+        if pref != "none":
+            base_bed = 0.030 if is_high_energy else 0.050
+        else:
+            base_bed = 0.10 if is_high_energy else 0.15
+
+        target_gain = base_bed * _bed_gain_mul
         if s_end > s_start:
             bed_gain_curve[s_start:s_end] = target_gain
             if i > 0 and s_start > 0:
-                prev_gain = (0.50 + 0.30 * arrangement.sections[i - 1].energy_level) * _bed_gain_mul
+                prev_base = 0.030 if (arrangement.sections[i - 1].energy_level > 0.80) else 0.050
+                prev_gain = prev_base * _bed_gain_mul
                 actual_ramp = min(ramp_len, s_end - s_start, s_start)
                 if actual_ramp > 1:
                     t_ramp = np.linspace(0.0, np.pi, actual_ramp, dtype=np.float32)
@@ -280,6 +416,17 @@ def render_candidate_composition(
                     r_end = r_start + actual_ramp
                     if 0 <= r_start and r_end <= total_samples:
                         bed_gain_curve[r_start:r_end] = prev_gain * (1.0 - w) + target_gain * w
+
+    # Apply tight tempo-synced sidechain pumping on the bed (breathing on 4-on-the-floor kick)
+    if pref != "none" and bpm > 60.0:
+        beat_samp = int((60.0 / bpm) * sr)
+        if beat_samp > 100:
+            num_beats = total_samples // beat_samp + 1
+            t_b = np.linspace(0, 1, beat_samp, endpoint=False, dtype=np.float32)
+            pump_one_beat = np.clip(0.06 + 0.94 * (t_b ** 0.60), 0.0, 1.0)
+            pump_curve = np.tile(pump_one_beat, num_beats)[:total_samples]
+            bed_gain_curve *= pump_curve
+
     mix += raw_bed * bed_gain_curve
     del raw_bed
 
@@ -348,6 +495,54 @@ def render_candidate_composition(
                     c_chunk[:fade_samples] *= fade_in
                     c_chunk[-fade_samples:] *= fade_out
 
+                # --- Artist Archetype Chord Rhythm Engine ---
+                step_16 = b_len / 16.0
+                chord_env = np.ones(b_len, dtype=np.float32)
+                groove = getattr(artist_profile, 'groove_type', '')
+                a_id = getattr(artist_profile, 'id', '')
+
+                if groove == "disco_boots_cats" or "disco" in a_id:
+                    # Nu-Disco / Dua Lipa: 8th-note upbeat stabs (hits on beats 2, 6, 10, 14)
+                    chord_env.fill(0.08)
+                    for s in [2, 6, 10, 14]:
+                        s_pos = int(s * step_16)
+                        hit_len = min(int(step_16 * 1.5), b_len - s_pos)
+                        if hit_len > 1:
+                            decay_h = np.exp(-np.linspace(0, 3.8, hit_len, dtype=np.float32))
+                            chord_env[s_pos:s_pos + hit_len] = np.maximum(chord_env[s_pos:s_pos + hit_len], decay_h)
+
+                elif groove == "synthwave_driving" or "synthwave" in a_id:
+                    # 80s Synthwave / The Weeknd: driving 8th-note pulsing arpeggio gate
+                    t_b = np.linspace(0, 8.0 * np.pi, b_len, endpoint=False, dtype=np.float32)
+                    chord_env = (0.35 + 0.65 * (0.5 + 0.5 * np.sin(t_b))).astype(np.float32)
+
+                elif groove == "pop_four_floor" or "electro" in a_id or a_id == "ladygaga_redone_electro":
+                    # Electro-Pop / Lady Gaga: 16th-note driving sidechain pumping stabs
+                    chord_env.fill(0.12)
+                    for s in range(16):
+                        s_pos = int(s * step_16)
+                        hit_len = min(int(step_16 * 0.85), b_len - s_pos)
+                        if hit_len > 1:
+                            decay_h = np.exp(-np.linspace(0, 4.2, hit_len, dtype=np.float32))
+                            chord_env[s_pos:s_pos + hit_len] = np.maximum(chord_env[s_pos:s_pos + hit_len], decay_h)
+
+                elif groove == "live_funk_swung" or "funk" in a_id:
+                    # Funk / Bruno Mars: Syncopated rhythmic stabs (steps 0, 3, 6, 10, 14)
+                    chord_env.fill(0.06)
+                    for s in [0, 3, 6, 10, 14]:
+                        s_pos = int(s * step_16)
+                        hit_len = min(int(step_16 * 1.4), b_len - s_pos)
+                        if hit_len > 1:
+                            decay_h = np.exp(-np.linspace(0, 3.2, hit_len, dtype=np.float32))
+                            chord_env[s_pos:s_pos + hit_len] = np.maximum(chord_env[s_pos:s_pos + hit_len], decay_h)
+
+                elif "trap" in groove or "drill" in groove:
+                    # Dark Trap / Metro Boomin: Sparse dramatic minor piano stab on step 0
+                    decay_trap = np.exp(-np.linspace(0, 1.8, b_len, dtype=np.float32))
+                    chord_env = 0.15 + 0.85 * decay_trap
+
+                c_chunk *= chord_env
+
                 pan_c = rng.uniform(-0.25, 0.25)
                 panned_c = apply_panning(c_chunk * (0.78 * sec.energy_level), pan=pan_c)
                 track_chords[:, b_start:b_end] += panned_c
@@ -377,7 +572,8 @@ def render_candidate_composition(
             s_start = int(sec.start_time * sr)
             s_end = min(total_samples, int((sec.start_time + sec.duration) * sr))
             if s_end > s_start:
-                sec_pad = pad_stereo[:, s_start:s_end] * (0.42 * sec.energy_level)
+                pad_gain = (0.14 * sec.energy_level) if pref != "none" else (0.45 * sec.energy_level)
+                sec_pad = pad_stereo[:, s_start:s_end] * pad_gain
                 sec_pad = apply_fade(sec_pad, fade_samples=min(int(0.04 * sr), (s_end - s_start) // 4))
                 track_chords[:, s_start:s_end] += sec_pad
     del pad_stereo
@@ -405,18 +601,31 @@ def render_candidate_composition(
     if beat_preference != "none":
         track_drums = np.zeros((2, total_samples), dtype=np.float32)
 
-        # Build varied genre-tailored one-shot pools from impacts and acoustic movements
-        kick_samples = [render_noise_kick(sl.audio, velocity=0.96, sr=sr, genre=pref) for sl in palette.impacts[:4]]
-        snare_sources = (palette.impacts[:3] + palette.movements[:2]) or palette.all_slices[:3]
-        snare_samples = [render_noise_snare(sl.audio, velocity=0.90, sr=sr, genre=pref) for sl in snare_sources]
-        hihat_samples = [render_noise_hihat(sl.audio, velocity=0.74, sr=sr, genre=pref) for sl in (palette.pulses[:5] or palette.all_slices[:5])]
+        # Build varied genre-tailored one-shot pools (or specialized beatbox mouth drums)
+        is_beatbox = bool(smart_profile and getattr(smart_profile, 'has_beatbox', False))
+        if is_beatbox and getattr(palette, 'beatbox_kicks', None):
+            kick_samples = [render_noise_kick(sl.audio, velocity=0.98, sr=sr, genre=pref) for sl in palette.beatbox_kicks[:4]]
+        else:
+            kick_samples = [render_noise_kick(sl.audio, velocity=0.96, sr=sr, genre=pref) for sl in palette.impacts[:4]]
+
+        if is_beatbox and getattr(palette, 'beatbox_snares', None):
+            snare_samples = [render_noise_snare(sl.audio, velocity=0.92, sr=sr, genre=pref) for sl in palette.beatbox_snares[:4]]
+        else:
+            snare_sources = (palette.impacts[:3] + palette.movements[:2]) or palette.all_slices[:3]
+            snare_samples = [render_noise_snare(sl.audio, velocity=0.90, sr=sr, genre=pref) for sl in snare_sources]
+
+        if is_beatbox and getattr(palette, 'beatbox_hats', None):
+            hihat_samples = [render_noise_hihat(sl.audio, velocity=0.76, sr=sr, genre=pref) for sl in palette.beatbox_hats[:5]]
+        else:
+            hihat_samples = [render_noise_hihat(sl.audio, velocity=0.74, sr=sr, genre=pref) for sl in (palette.pulses[:5] or palette.all_slices[:5])]
         open_hihat_samples = [render_noise_open_hihat(sl.audio, velocity=0.78, sr=sr, genre=pref) for sl in (palette.pulses[:4] or palette.all_slices[:4])]
 
         kick_bag = BagSelector(kick_samples, rng=rng)
         snare_bag = BagSelector(snare_samples, rng=rng)
         hihat_bag = BagSelector(hihat_samples, rng=rng)
         open_hihat_bag = BagSelector(open_hihat_samples, rng=rng)
-        foley_bag = BagSelector(palette.impacts + palette.textures, rng=rng)
+        foley_sources = [s for s in (palette.impacts + palette.textures) if getattr(s, "role", "") not in ("VOCAL_PHRASE", "VOCAL_CHOP")] if is_lead_vocal_mode else (palette.impacts + palette.textures)
+        foley_bag = BagSelector(foley_sources if foley_sources else (palette.impacts or palette.all_slices), rng=rng)
 
         sec_bar_offset = 0
         step_dur = arrangement.seconds_per_bar / 16.0
@@ -574,8 +783,113 @@ def render_candidate_composition(
                             track_bass[1, s_start:s_start + bl] += b_hit
             sec_bar_offset += sec.bars
 
+    elif _bass_style == "disco_octave_pump":
+        # Dua Lipa Nu-Disco: 16th-note driving octave pump bassline (Don't Start Now / Studio 54)
+        step_16_sec = arrangement.seconds_per_bar / 16.0
+        note_dur = step_16_sec * 0.88
+
+        for sec in arrangement.sections:
+            if "bass" in sec.active_layers:
+                for b in range(sec.bars):
+                    global_bar = sec_bar_offset + b
+                    chord_idx = global_bar % len(chords)
+                    chord = chords[chord_idx]
+                    bar_time = sec.start_time + b * arrangement.seconds_per_bar
+                    root_f = midi_to_hz(chord.root_midi)
+                    while root_f > 115.0:
+                        root_f /= 2.0
+                    while root_f < 40.0:
+                        root_f *= 2.0
+                    oct_f = root_f * 2.0
+                    fifth_f = root_f * 1.5
+
+                    # Hypnotic 16th driving disco octave bounce
+                    disco_hits = [
+                        (0, root_f, 0.98), (1, oct_f, 0.78), (2, oct_f, 0.88), (3, root_f, 0.82),
+                        (4, root_f, 0.98), (5, oct_f, 0.78), (6, oct_f, 0.88), (7, fifth_f, 0.84),
+                        (8, root_f, 0.98), (9, oct_f, 0.80), (10, oct_f, 0.90), (11, root_f, 0.82),
+                        (12, root_f, 0.98), (13, oct_f, 0.80), (14, oct_f, 0.92), (15, oct_f, 0.85)
+                    ]
+                    for s16, f_n, vel_b in disco_hits:
+                        s_start = int((bar_time + s16 * step_16_sec) * sr)
+                        if s_start >= total_samples:
+                            continue
+                        b_sl = bass_slice_bag.next()
+                        b_audio = b_sl.audio if b_sl is not None else None
+                        rendered_bass = render_noise_bass_note(
+                            source_audio=prefiltered_bass_source,
+                            freq=f_n,
+                            duration=note_dur,
+                            velocity=vel_b * sec.energy_level,
+                            sr=sr,
+                            is_prefiltered=True,
+                            slice_audio=b_audio
+                        )
+                        bl = min(len(rendered_bass), total_samples - s_start)
+                        if bl > 0:
+                            b_hit = apply_fade(rendered_bass[:bl], fade_samples=32)
+                            track_bass[0, s_start:s_start + bl] += b_hit
+                            track_bass[1, s_start:s_start + bl] += b_hit
+            sec_bar_offset += sec.bars
+
+    elif _bass_style == "billie_jean_ostinato":
+        # Michael Jackson & Quincy Jones: Driving 8th-note walking synth ostinato ("Billie Jean" / "Thriller")
+        # Step: 0 (Root), 2 (5th below), 4 (b7 below), 6 (Root), 8 (b7 below), 10 (5th below), 12 (4th below), 14 (5th below)
+        step_16_sec = arrangement.seconds_per_bar / 16.0
+        note_dur = step_16_sec * 1.35  # Snappy staccato 8th notes
+
+        for sec in arrangement.sections:
+            if "bass" in sec.active_layers:
+                for b in range(sec.bars):
+                    global_bar = sec_bar_offset + b
+                    chord_idx = global_bar % len(chords)
+                    chord = chords[chord_idx]
+                    bar_time = sec.start_time + b * arrangement.seconds_per_bar
+                    root_f = midi_to_hz(chord.root_midi)
+                    while root_f > 110.0:
+                        root_f /= 2.0
+                    while root_f < 44.0:
+                        root_f *= 2.0
+
+                    f_r = root_f
+                    f_5th_down = root_f * (2.0 ** (-7.0 / 12.0))
+                    f_b7_down = root_f * (2.0 ** (-2.0 / 12.0))
+                    f_4th_down = root_f * (2.0 ** (-5.0 / 12.0))
+
+                    ostinato_hits = [
+                        (0, f_r, 1.00),
+                        (2, f_5th_down, 0.88),
+                        (4, f_b7_down, 0.92),
+                        (6, f_r, 0.96),
+                        (8, f_b7_down, 0.90),
+                        (10, f_5th_down, 0.86),
+                        (12, f_4th_down, 0.88),
+                        (14, f_5th_down, 0.86),
+                    ]
+                    for s16, f_n, vel_b in ostinato_hits:
+                        s_start = int((bar_time + s16 * step_16_sec) * sr)
+                        if s_start >= total_samples:
+                            continue
+                        b_sl = bass_slice_bag.next()
+                        b_audio = b_sl.audio if b_sl is not None else None
+                        rendered_bass = render_noise_bass_note(
+                            source_audio=prefiltered_bass_source,
+                            freq=f_n,
+                            duration=note_dur,
+                            velocity=vel_b * sec.energy_level,
+                            sr=sr,
+                            is_prefiltered=True,
+                            slice_audio=b_audio
+                        )
+                        bl = min(len(rendered_bass), total_samples - s_start)
+                        if bl > 0:
+                            b_hit = apply_fade(rendered_bass[:bl], fade_samples=32)
+                            track_bass[0, s_start:s_start + bl] += b_hit
+                            track_bass[1, s_start:s_start + bl] += b_hit
+            sec_bar_offset += sec.bars
+
     elif _bass_style in ["karplus_bass", "karplus_slap"]:
-        # Karplus-Strong physical modeling bass guitar / funk slap bass (Michael Jackson, Bruno Mars, Dua Lipa, J Dilla)
+        # Karplus-Strong physical modeling bass guitar / funk slap bass (Michael Jackson, Bruno Mars, J Dilla)
         step_16_sec = arrangement.seconds_per_bar / 16.0
         note_dur = step_16_sec * 1.6
         is_slap = (_bass_style == "karplus_slap")
@@ -597,15 +911,16 @@ def render_candidate_composition(
                     fifth_f = root_f * 1.5
 
                     funk_hits = [
-                        (0, root_f, 0.96),
-                        (3, root_f, 0.86),
-                        (6, fifth_f, 0.90),
-                        (8, root_f, 0.92),
-                        (10, oct_f, 0.94),
-                        (14, fifth_f, 0.88)
+                        (0, root_f, 0.98),
+                        (3, fifth_f, 0.84),
+                        (6, oct_f, 0.92),
+                        (8, root_f, 0.94),
+                        (11, root_f, 0.78),
+                        (14, oct_f, 0.96)
                     ]
                     for s16, f_n, vel_b in funk_hits:
                         s_start = int((bar_time + s16 * step_16_sec) * sr)
+
                         if s_start >= total_samples:
                             continue
                         b_sl = bass_slice_bag.next()
@@ -742,6 +1057,43 @@ def render_candidate_composition(
                         bl = min(len(rendered_bass), total_samples - s_start)
                         if bl > 0:
                             b_hit = apply_fade(rendered_bass[:bl], fade_samples=48)
+            sec_bar_offset += sec.bars
+
+    elif _bass_style in ["saw_pluck", "electro_saw_pluck"]:
+        # Lady Gaga / RedOne Electro: 16th-note saturated saw bass pluck on driving steps [0, 3, 6, 8, 11, 14]
+        step_16_sec = arrangement.seconds_per_bar / 16.0
+        note_dur = step_16_sec * 0.90
+        for sec in arrangement.sections:
+            if "bass" in sec.active_layers:
+                for b in range(sec.bars):
+                    global_bar = sec_bar_offset + b
+                    chord_idx = global_bar % len(chords)
+                    chord = chords[chord_idx]
+                    bar_time = sec.start_time + b * arrangement.seconds_per_bar
+                    root_f = midi_to_hz(chord.root_midi)
+                    while root_f > 110.0:
+                        root_f /= 2.0
+                    oct_f = root_f * 2.0
+
+                    saw_hits = [(0, root_f, 1.0), (3, root_f, 0.85), (6, oct_f, 0.95), (8, root_f, 1.0), (11, oct_f, 0.90), (14, root_f, 0.92)]
+                    for s16, f_n, vel_b in saw_hits:
+                        s_start = int((bar_time + s16 * step_16_sec) * sr)
+                        if s_start >= total_samples:
+                            continue
+                        b_sl = bass_slice_bag.next()
+                        b_audio = b_sl.audio if b_sl is not None else None
+                        rendered_bass = render_noise_bass_note(
+                            source_audio=prefiltered_bass_source,
+                            freq=f_n,
+                            duration=note_dur,
+                            velocity=vel_b * sec.energy_level,
+                            sr=sr,
+                            is_prefiltered=True,
+                            slice_audio=b_audio
+                        )
+                        bl = min(len(rendered_bass), total_samples - s_start)
+                        if bl > 0:
+                            b_hit = apply_fade(rendered_bass[:bl], fade_samples=24)
                             track_bass[0, s_start:s_start + bl] += b_hit
                             track_bass[1, s_start:s_start + bl] += b_hit
             sec_bar_offset += sec.bars
@@ -839,7 +1191,11 @@ def render_candidate_composition(
                 if cur_grain is None or len(cur_grain) == 0:
                     cur_grain = prep.mono[:min(len(prep.mono), int(0.08 * sr))]
 
-                if lead_style == "karplus":
+                intro_lead = getattr(artist_profile, 'intro_lead_style', '')
+                is_intro_outro = bool(sec and ("Intro" in sec.name or "Outro" in sec.name or "Hook" in sec.name and "Chorus" not in sec.name))
+                cur_lead = (intro_lead if (intro_lead and is_intro_outro) else lead_style)
+
+                if cur_lead == "karplus":
                     note_audio = render_karplus_strong_noise_note(
                         source_grain=cur_grain,
                         freq=event.freq_hz,
@@ -855,7 +1211,7 @@ def render_candidate_composition(
                         freq=event.freq_hz,
                         duration=event.duration,
                         velocity=event.velocity * sec.energy_level * 0.88,
-                        style=lead_style,
+                        style=cur_lead,
                         sr=sr
                     )
                 pan = rng.uniform(-0.35, 0.35)
@@ -870,6 +1226,244 @@ def render_candidate_composition(
     track_melody = schroeder_reverb(track_melody, room_size=_m_room, wet_level=_m_wet, sr=sr)
     mix += track_melody * _melody_mix
     del track_melody
+
+    # --- STEM 5.5: VOCAL LEAD & SCALE-AUTO-TUNED HOOK (Full Phrases or Syllabic Chops) ---
+    track_vocal_hook = np.zeros((2, total_samples), dtype=np.float32)
+    is_vocal_source = bool(
+        smart_profile and (
+            getattr(smart_profile, 'has_speech_or_vocal', False)
+            or getattr(smart_profile, 'has_humming', False)
+            or getattr(smart_profile, 'primary_category', '') == "VOCAL"
+        )
+    )
+    is_hum = bool(smart_profile and getattr(smart_profile, 'has_humming', False))
+    available_phrases = getattr(palette, 'full_vocal_phrases', [])
+    lead_take = getattr(palette, 'lead_vocal_take', None)
+
+    # Detect genuine singing or humming (avoids turning spoken words into crackly robotic chords)
+    _phrase_pitch_confs = [p.pitch_conf for p in available_phrases if getattr(p, "pitch_conf", 0.0) > 0]
+    has_strong_singing_pitch = bool(
+        getattr(analysis.pitch, "has_reliable_pitch", False)
+        and len(_phrase_pitch_confs) > 0
+        and float(np.mean(_phrase_pitch_confs)) >= 0.68
+    )
+    is_singing = bool(is_hum or has_strong_singing_pitch)
+
+    # Determine if Lead Vocal (Full Phrase Take) mode is activated
+    # Solves cutoff complaints: full phrase preserves entire sentences, intact words and lyrics
+    use_lead_vocal_take = bool(
+        is_vocal_source
+        and (
+            (vocal_mode in ("lead", "full_phrase"))
+            or (vocal_mode == "auto" and len(available_phrases) > 0)
+        )
+        and (len(available_phrases) > 0 or (lead_take is not None and len(lead_take) > int(0.8 * sr)))
+    )
+
+    # chops mode is explicitly requested
+    force_chops_mode = bool(
+        vocal_mode == "chops"
+    )
+
+    has_source_horn_stabs = bool(
+        not is_vocal_source
+        and getattr(palette, 'traffic_horns', None)
+        and any(getattr(s, 'pitch_conf', 0.0) > 0.35 or 300.0 <= getattr(s, 'dominant_pitch_hz', 0.0) <= 2200.0 for s in palette.traffic_horns)
+    )
+
+    has_vocal_content = bool(
+        use_lead_vocal_take
+        or (is_vocal_source and vocal_mode in ("lead", "full_phrase", "chops"))
+        or (is_vocal_source and bool(getattr(palette, 'vocal_chops', [])))
+        or has_source_horn_stabs
+    )
+
+    if has_vocal_content:
+        if use_lead_vocal_take and not force_chops_mode:
+            if on_progress:
+                on_progress(91, f"Arranging Continuous Lead Vocal track: studio vocal chain ({scale.name})...")
+
+            # 1. Obtain entire, unbroken lead vocal take (never chopped or fragmented)
+            raw_lead = lead_take if (lead_take is not None and len(lead_take) > 0) else prep.mono
+            clean_lead = dehiss_audio(raw_lead, sr=sr, high_cut_hz=14500.0, gate_threshold_db=-46.0)
+
+            # 2. Studio High-Pass Filter (75 Hz) to remove sub rumble, plosives, and handling noise
+            try:
+                b_hp, a_hp = signal.butter(2, 75.0 / (sr * 0.5), btype='high')
+                clean_lead = signal.lfilter(b_hp, a_hp, clean_lead)
+            except Exception:
+                pass
+
+            # 3. High-shelf presence air boost (4.0 kHz) for crystal-clear lyric diction & air
+            try:
+                b_air, a_air = signal.butter(1, 4000.0 / (sr * 0.5), btype='high')
+                air_boost = signal.lfilter(b_air, a_air, clean_lead) * 0.12
+                clean_lead = np.clip(clean_lead + air_boost, -1.0, 1.0)
+            except Exception:
+                pass
+
+            # 4. Auto-Tuning & Harmonization:
+            # Singing / Humming: quantize sustained pitch & stack lush 3rd/5th choir harmonies
+            # Speaking / Voice Memos: keep 100% natural, continuous, and clear without robotic crackle or flanging
+            if is_singing or is_hum:
+                lead_processed = auto_tune_continuous_phrase(
+                    clean_lead,
+                    scale_midis=scale_midis,
+                    sr=sr,
+                    strength=0.95,
+                    retune_speed=0.85,
+                    is_singing=True
+                )
+                harm_semi = [0.0, 3.0, 7.0] if "minor" in scale.name.lower() else [0.0, 4.0, 7.0]
+                harm_weights = [1.0, 0.45, 0.32] if not is_hum else [1.0, 0.60, 0.40]
+                lead_processed = harmonize_vocal_slice(lead_processed, intervals=harm_semi, weights=harm_weights, sr=sr)
+            else:
+                lead_processed = clean_lead.copy()
+
+            lead_processed = normalize_slice_rms(lead_processed, target_rms=0.22)
+            lead_len = len(lead_processed)
+
+            # 5. Continuous Timeline Placement:
+            # Preserves the full take in continuous chronological sequence without chopping or section scattering
+            verse_sec = next((s for s in arrangement.sections if "Verse" in s.name or "Drop" in s.name or "Chorus" in s.name), arrangement.sections[0])
+
+            # If recording is long (fits whole song or near total duration), start right at 0.0s
+            if lead_len >= (total_samples - int(2.5 * sr)):
+                v_start = 0
+            else:
+                # Drop vocal on beat 1 of verse after intro
+                v_start = int(verse_sec.start_time * sr)
+
+            v_end = min(total_samples, v_start + lead_len)
+            v_actual_len = v_end - v_start
+            if v_actual_len > 128:
+                v_chunk = lead_processed[:v_actual_len].copy()
+                fade_v = min(int(0.02 * sr), v_actual_len // 8)
+                if fade_v > 2:
+                    w_v = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, fade_v, dtype=np.float32))
+                    v_chunk[:fade_v] *= w_v
+                    v_chunk[-fade_v:] *= w_v[::-1]
+
+                track_vocal_hook[0, v_start:v_end] += v_chunk * 1.05
+                track_vocal_hook[1, v_start:v_end] += v_chunk * 1.05
+
+            # If vocal is short (< 14s) and ends before song ends, repeat take in Chorus/Drop
+            if lead_len < int(14.0 * sr):
+                chorus_sec = next((s for s in arrangement.sections if ("Chorus" in s.name or "Climax" in s.name) and (s.start_time * sr) >= v_end), None)
+                if chorus_sec:
+                    c_start = int(chorus_sec.start_time * sr)
+                    c_end = min(total_samples, c_start + lead_len)
+                    c_len = c_end - c_start
+                    if c_len > 128:
+                        c_chunk = lead_processed[:c_len].copy()
+                        fade_c = min(int(0.02 * sr), c_len // 8)
+                        if fade_c > 2:
+                            w_c = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, fade_c, dtype=np.float32))
+                            c_chunk[:fade_c] *= w_c
+                            c_chunk[-fade_c:] *= w_c[::-1]
+                        track_vocal_hook[0, c_start:c_end] += c_chunk * 1.08
+                        track_vocal_hook[1, c_start:c_end] += c_chunk * 1.08
+
+            # 6. Studio vocal chain: stereo delay + reverb for depth and space
+            track_vocal_hook = ping_pong_delay(track_vocal_hook, bpm=bpm, division=0.5, feedback=0.24, mix=0.18, sr=sr)
+            track_vocal_hook = schroeder_reverb(track_vocal_hook, room_size=0.40, wet_level=0.20, sr=sr)
+
+            # 7. Dynamic Vocal Sidechain Ducking on Accompaniment:
+            # When lead vocal is speaking or singing, smoothly duck chords/pads by -3.5 dB
+            v_mono = 0.5 * (np.abs(track_vocal_hook[0]) + np.abs(track_vocal_hook[1]))
+            if np.max(v_mono) > 1e-4:
+                try:
+                    b_env, a_env = signal.butter(1, 10.0 / (sr * 0.5), btype='low')
+                    v_smoothed = signal.lfilter(b_env, a_env, v_mono)
+                    v_smoothed = v_smoothed / (np.max(v_smoothed) + 1e-6)
+                    duck_curve = (1.0 - 0.35 * np.clip(v_smoothed * 2.0, 0.0, 1.0)).astype(np.float32)
+                    mix[0] *= duck_curve
+                    mix[1] *= duck_curve
+                except Exception:
+                    pass
+
+            mix += track_vocal_hook * 1.10
+            del track_vocal_hook
+
+        else:
+            # Syllabic Chops Mode OR Auto-Tuned Traffic Horn Stabs Mode
+            if has_source_horn_stabs:
+                source_v_slices = [s for s in palette.traffic_horns if (getattr(s, 'pitch_conf', 0.0) > 0.30 or 250.0 <= getattr(s, 'dominant_pitch_hz', 0.0) <= 2400.0)]
+                if not source_v_slices:
+                    source_v_slices = palette.traffic_horns
+            elif is_hum and palette.humming_slices:
+                source_v_slices = palette.humming_slices
+            else:
+                source_v_slices = palette.vocal_chops
+            vocal_bag = BagSelector(source_v_slices, rng=rng)
+
+            hook_title = "traffic horn & brass stabs" if has_source_horn_stabs else "vocal hooks & soul chops"
+            if on_progress:
+                on_progress(91, f"Arranging scale-Auto-Tuned {hook_title} ({scale.name})...")
+
+            step_dur = arrangement.seconds_per_bar / 16.0
+            sec_bar_offset = 0
+            for sec in arrangement.sections:
+                is_hook_section = (
+                    "vocal_hook" in sec.active_layers
+                    or "Chorus" in sec.name
+                    or "Climax" in sec.name
+                    or "Drop" in sec.name
+                    or "Hook" in sec.name
+                    or (sec.energy_level > 0.62)
+                )
+                if is_hook_section:
+                    for b in range(sec.bars):
+                        global_bar = sec_bar_offset + b
+                        bar_start_s = int((sec.start_time + b * arrangement.seconds_per_bar) * sr)
+                        chord_idx = global_bar % len(chords)
+                        chord = chords[chord_idx]
+                        chord_midis = [int(round(hz_to_midi(f))) for f in chord.frequencies]
+
+                        hook_steps = [4, 10] if (b % 2 == 0) else [6, 12, 14]
+                        for h_idx, h_step in enumerate(hook_steps):
+                            step_s = bar_start_s + int(h_step * step_dur * sr)
+                            if step_s >= total_samples:
+                                continue
+                            cur_vocal = vocal_bag.next()
+                            if cur_vocal is not None and len(cur_vocal.audio) > 0:
+                                target_midi_candidates = [chord_midis[h_idx % len(chord_midis)]] if chord_midis else scale_midis
+                                tuned_vocal, det_hz, target_note = auto_tune_slice(
+                                    cur_vocal.audio,
+                                    scale_midis=scale_midis,
+                                    target_chord_midis=target_midi_candidates,
+                                    strength=1.0,
+                                    sr=sr
+                                )
+                                if is_hum:
+                                    harm_semi = [0.0, 3.0, 7.0] if "minor" in scale.name.lower() else [0.0, 4.0, 7.0]
+                                    tuned_vocal = harmonize_vocal_slice(tuned_vocal, intervals=harm_semi, weights=[1.0, 0.65, 0.45], sr=sr)
+
+                                pitch_shift_semi = 0.0
+                                if det_hz <= 0.0 and chord_midis:
+                                    target_midi = chord_midis[h_idx % len(chord_midis)]
+                                    pitch_shift_semi = float((target_midi - 60) % 12)
+                                    if pitch_shift_semi > 6:
+                                        pitch_shift_semi -= 12
+
+                                c_note = render_pitched_vocal_chop(
+                                    slice_audio=tuned_vocal,
+                                    semitones=pitch_shift_semi,
+                                    duration=min(0.42, step_dur * 3.8),
+                                    velocity=0.92 * sec.energy_level,
+                                    sr=sr
+                                )
+                                pan_v = rng.uniform(-0.25, 0.25)
+                                panned_v = apply_panning(c_note, pan=pan_v)
+                                vl = min(panned_v.shape[1], total_samples - step_s)
+                                if vl > 0:
+                                    track_vocal_hook[:, step_s:step_s + vl] += panned_v[:, :vl]
+                sec_bar_offset += sec.bars
+
+            track_vocal_hook = ping_pong_delay(track_vocal_hook, bpm=bpm, division=0.5, feedback=0.30, mix=0.25, sr=sr)
+            track_vocal_hook = schroeder_reverb(track_vocal_hook, room_size=0.48, wet_level=0.25, sr=sr)
+            mix += track_vocal_hook * (0.88 if is_hum else 0.82)
+            del track_vocal_hook
 
 
     # --- STEM 6: STRUCTURAL RISERS, DOWNLIFTERS & ACCENTS (Timeline Diversity) ---
@@ -887,10 +1481,14 @@ def render_candidate_composition(
                 panned_riser = apply_panning(apply_fade(riser_audio[:rl], fade_samples=48) * 0.85, pan=0.0)
                 mix[:, r_start:r_start + rl] += panned_riser * 0.65
 
-        # 2. Downlifter / Impact crash at Chorus_Climax drop
-        if sec.name == "Chorus_Climax" and palette.impacts:
+        # 2. Downlifter / Impact crash / Auto-Tuned Car Horn stab at Chorus_Climax drop
+        if sec.name == "Chorus_Climax":
             down_sl = accent_bag.next()
             dl_audio = down_sl.audio if down_sl is not None else palette.impacts[0].audio
+            # If traffic horns present, auto-tune the horn stab to the scale root!
+            if smart_profile and getattr(smart_profile, 'has_traffic_or_engine', False) and palette.traffic_horns:
+                horn_raw = palette.traffic_horns[0].audio
+                dl_audio, _, _ = auto_tune_slice(horn_raw, scale_midis=scale_midis, strength=1.0, sr=sr)
             downlifter = render_noise_downlifter(dl_audio, duration=2.0, sr=sr)
             d_start = int(sec.start_time * sr)
             dl = min(len(downlifter), total_samples - d_start)
@@ -929,12 +1527,39 @@ def render_candidate_composition(
         sr=sr
     )
 
-    # Contextual stem descriptions reflecting instrument style & production sound
+    # Dynamic contextual stem descriptions reflecting smart extraction & artist profile
     lead_name = _lead_style.replace('_', ' ').title()
     bass_name = _bass_style.replace('_', ' ').title()
     groove_name = artist_profile.groove_type.replace('_', ' ').title()
 
-    drum_desc = f"Procedural Drum Groove ({groove_name})"
+    is_vocal = bool(smart_profile and (getattr(smart_profile, 'autotune_enabled', False) or getattr(smart_profile, 'has_speech_or_vocal', False)))
+    is_hum = bool(smart_profile and getattr(smart_profile, 'has_humming', False))
+    is_beatbox = bool(smart_profile and getattr(smart_profile, 'has_beatbox', False))
+    is_traffic = bool(smart_profile and getattr(smart_profile, 'has_traffic_or_engine', False))
+
+    if is_beatbox:
+        drum_desc = f"Authentic Vocal Beatbox Kit ({groove_name})"
+    else:
+        drum_desc = f"Procedural Drum Groove ({groove_name})"
+
+    if is_traffic:
+        bed_desc = f"Sidechained Urban Traffic & Engine Bed ({scale.name} Resonated)"
+    else:
+        bed_desc = "Atmospheric Source Recording Bed (Rhythmic Pumped)"
+
+    if not has_vocal_content:
+        vocal_desc = "Pure Instrumental Arrangement (Source transformed to Chords, Bass & Drums)"
+    elif has_source_horn_stabs:
+        vocal_desc = f"Scale Auto-Tuned Traffic Horn Stabs ({scale.name}) — Transformed City Brass Hook"
+    elif use_lead_vocal_take:
+        vocal_desc = f"Lead Vocal Track: Full Phrase Auto-Tuned ({scale.name}) — Uncut Lyrical Intelligibility"
+    elif is_hum:
+        vocal_desc = f"Scale Auto-Tuned Harmonized Vocal Hum ({scale.name})"
+    elif is_vocal:
+        vocal_desc = f"Scale Auto-Tuned Speech Chops ({scale.name}) — Catchy Vocal Hooks"
+    else:
+        vocal_desc = f"Tuned Syllabic Vocal/Source Chops ({scale.name})"
+
     bass_desc = f"Deep Synthesized Bassline ({bass_name})"
     lead_desc = f"Procedural Melodic Hook ({lead_name})"
 
@@ -943,8 +1568,10 @@ def render_candidate_composition(
         "Bass": bass_desc,
         "Chords": f"Dynamic 4-Chord Resonant Progression ({scale.name})",
         "Melody": lead_desc,
-        "Bed": "Atmospheric Source Recording Bed",
-        "Accents": "Dynamic Noise Riser & Impact Sweeps"
+        "Vocal Hook": vocal_desc,
+        "Bed": bed_desc,
+        "Accents": "Auto-Tuned Horn & Impact Sweeps" if is_traffic else "Dynamic Noise Riser & Impact Sweeps",
+        "Intro Tag": "Auto-Tuned Source Intro Hook" if (is_vocal or is_hum) else "Authentic Source Audio Intro Anchor"
     }
 
     palette_info = {
@@ -955,6 +1582,13 @@ def render_candidate_composition(
         "drones": len(palette.drones),
         "ambience": len(palette.ambience),
         "accents": len(palette.accents),
+        "vocal_chops": len(palette.vocal_chops),
+        "full_vocal_phrases": len(getattr(palette, 'full_vocal_phrases', [])),
+        "beatbox_kicks": len(palette.beatbox_kicks),
+        "beatbox_snares": len(palette.beatbox_snares),
+        "beatbox_hats": len(palette.beatbox_hats),
+        "traffic_horns": len(palette.traffic_horns),
+        "humming_slices": len(palette.humming_slices),
         "total_slices": palette.total_slices_extracted,
         "chronological_slices": len(palette.chronological_slices)
     }
@@ -972,7 +1606,11 @@ def render_candidate_composition(
         palette_info=palette_info,
         artist_name=artist_profile.name,
         artist_id=artist_profile.id,
-        artist_track_hint=artist_profile.track_title_hint
+        artist_track_hint=artist_profile.track_title_hint,
+        cycle_reset=cycle_reset,
+        style_name=artist_profile.display_name,
+        style_desc=artist_profile.vibe,
+        smart_profile=smart_profile
     )
 
 
@@ -982,11 +1620,14 @@ def generate_candidates(
     base_seed: Optional[int] = None,
     beat_preference: str = "pop",
     energy_preference: str = "low",
+    vocal_mode: str = "auto",
     num_candidates: int = 1,
     on_progress: Optional[Any] = None,
-    target_duration: float = 30.0
+    target_duration: float = 30.0,
+    played_artists: Optional[List[str]] = None,
+    preferred_artist_id: Optional[str] = None
 ) -> Tuple[CompositionResult, List[CompositionResult]]:
-    """Generates candidates with independent seeds, ranked by score. Optimized for speed and low RAM."""
+    """Generates candidates with independent seeds and distinct artist profiles. Optimized for speed and low RAM."""
     if base_seed is None:
         base_seed = generate_seed()
 
@@ -1009,7 +1650,8 @@ def generate_candidates(
         audio=prep.mono,
         sr=prep.sr,
         onset_samples=analysis.rhythm.onset_samples,
-        target_slice_count=_slice_count
+        target_slice_count=_slice_count,
+        smart_profile=getattr(analysis, 'smart_profile', None)
     )
 
     # Pre-render shared pad once across candidates
@@ -1030,24 +1672,31 @@ def generate_candidates(
         seeds.append(generate_seed())
 
     candidates: List[CompositionResult] = []
+    accumulated_played = list(played_artists or [])
     for idx, s in enumerate(seeds):
         if on_progress:
             pct = 64 + int((idx / max(1, num_candidates)) * 10)
             on_progress(pct, f"Procedurally synthesizing candidate {idx + 1} of {num_candidates}...")
+        cand_pref = preferred_artist_id if idx == 0 else None
         cand = render_candidate_composition(
             prep=prep,
             analysis=analysis,
             seed=s,
             beat_preference=beat_preference,
             energy_preference=energy_preference,
+            vocal_mode=vocal_mode,
             palette=palette,
             shared_pad=shared_pad,
             on_progress=on_progress,
-            target_duration=target_duration
+            target_duration=target_duration,
+            exclude_artist_ids=accumulated_played,
+            preferred_artist_id=cand_pref
         )
         candidates.append(cand)
+        accumulated_played.append(cand.artist_id)
         gc.collect()
         time.sleep(0.01)  # Yield CPU slice to OS scheduler to prevent UI stutter
 
     candidates.sort(key=lambda c: c.score.total_score, reverse=True)
     return candidates[0], candidates
+

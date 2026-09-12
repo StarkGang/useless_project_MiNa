@@ -32,7 +32,7 @@ def get_file_size_limit_bytes() -> int:
     Parse FILE_SIZE_LIMIT from environment (e.g. '5MB', '15MB', '5242880', '15').
     Defaults to 15MB (15 * 1024 * 1024 bytes).
     """
-    raw = os.environ.get("FILE_SIZE_LIMIT", "15MB").strip().upper()
+    raw = os.environ.get("FILE_SIZE_LIMIT", "50MB").strip().upper()
     try:
         if raw.endswith("MB"):
             return int(float(raw[:-2].strip()) * 1024 * 1024)
@@ -127,6 +127,15 @@ def api_config():
     }
 
 
+@router.get("/styles")
+def api_styles():
+    """Returns all curated sonic style archetypes with honest aesthetic names and descriptions."""
+    from ..music.artist_profiles import get_all_styles_metadata
+    return {
+        "styles": get_all_styles_metadata()
+    }
+
+
 @router.post("/analyze")
 async def analyze_uploaded_audio(file: UploadFile = File(...)):
     """
@@ -154,6 +163,21 @@ async def analyze_uploaded_audio(file: UploadFile = File(...)):
             "reasons": analysis.classification_reasons,
             "is_silent": prep.is_silent,
             "is_clipped": prep.is_clipped,
+            "smart_profile": {
+                "primary_category": analysis.smart_profile.primary_category,
+                "display_title": analysis.smart_profile.display_title,
+                "detected_elements": analysis.smart_profile.detected_elements,
+                "has_speech_or_vocal": analysis.smart_profile.has_speech_or_vocal,
+                "has_humming": analysis.smart_profile.has_humming,
+                "has_beatbox": analysis.smart_profile.has_beatbox,
+                "has_traffic_or_engine": analysis.smart_profile.has_traffic_or_engine,
+                "has_foley_percussive": analysis.smart_profile.has_foley_percussive,
+                "has_ambient_bed": analysis.smart_profile.has_ambient_bed,
+                "autotune_enabled": analysis.smart_profile.autotune_enabled,
+                "autotune_strength": analysis.smart_profile.autotune_strength,
+                "settings_summary": analysis.smart_profile.smart_settings_summary,
+                "recommended_styles": analysis.smart_profile.recommended_styles
+            } if getattr(analysis, 'smart_profile', None) else None,
             "dna": {
                 "rhythmic_density": analysis.rhythm.rhythmic_density,
                 "tempo_bpm": analysis.rhythm.estimated_tempo,
@@ -190,7 +214,10 @@ async def generate_music(
     energy_preference: str = Form("low"),
     seed: Optional[str] = Form(None),
     num_candidates: Optional[int] = Form(None),
-    duration_seconds: Optional[int] = Form(None)
+    duration_seconds: Optional[int] = Form(None),
+    played_artists: Optional[str] = Form(None),
+    preferred_artist_id: Optional[str] = Form(None),
+    vocal_mode: Optional[str] = Form("auto")
 ):
     """
     Submits a procedural music generation request.
@@ -203,6 +230,9 @@ async def generate_music(
             custom_seed_val = int(seed.strip())
         except ValueError:
             custom_seed_val = None
+
+    played_list = [x.strip() for x in played_artists.split(",") if x.strip()] if played_artists else []
+    eff_vocal_mode = (vocal_mode or "auto").strip().lower()
 
     if file is not None and file.filename:
         # Save file to uploads directory with strict size limit enforcement
@@ -222,7 +252,11 @@ async def generate_music(
         raise HTTPException(status_code=400, detail="Please upload an audio file or microphone recording.")
 
     # Validate and clamp duration (30s or 60s, default 30)
-    target_dur = float(duration_seconds) if duration_seconds in (30, 60) else 30.0
+    try:
+        d_val = int(duration_seconds) if duration_seconds is not None else 30
+        target_dur = 60.0 if d_val >= 45 else 30.0
+    except Exception:
+        target_dur = 30.0
 
     # Submit background generation task
     job_id = await submit_generation_job(
@@ -231,8 +265,12 @@ async def generate_music(
         energy_preference=energy_preference,
         custom_seed=custom_seed_val,
         num_candidates=num_candidates,
-        target_duration=target_dur
+        target_duration=target_dur,
+        vocal_mode=eff_vocal_mode,
+        played_artists=played_list,
+        preferred_artist_id=preferred_artist_id
     )
+
 
     return {
         "job_id": job_id,

@@ -35,6 +35,11 @@ class MusicalScale:
     intervals: List[int]              # Semitone offsets from root
     pitch_classes: List[int]          # 0..11 pitch classes
 
+    @property
+    def root_note(self) -> str:
+        """Alias for root_name to guarantee 100% backwards compatibility."""
+        return self.root_name
+
     def get_notes_in_octave_range(self, min_midi: int = 36, max_midi: int = 84) -> List[int]:
         """Return all MIDI note numbers in the scale within the specified range."""
         notes = []
@@ -56,17 +61,12 @@ def select_scale(
     noisiness: float,
     candidate_root_notes: Optional[List[str]] = None,
     rng: Optional[SeededRNG] = None,
-    genre_preference: Optional[str] = None
+    genre_preference: Optional[str] = None,
+    preferred_scale_types: Optional[List[str]] = None
 ) -> MusicalScale:
     """
     Intelligent weighted scale selection (Sections 11 & 12).
-    - Source is dark (low centroid/brightness) -> favor minor, dorian, phrygian
-    - Source is bright -> favor major, pentatonic_major, mixolydian
-    - Source is extremely noisy -> favor pentatonic_minor, ambient dorian, blues
-    - Genre preference:
-      * hiphop: favor dorian, minor, pentatonic_minor, blues
-      * rap: favor harmonic_minor, phrygian, minor, pentatonic_minor
-      * pop: favor major, pentatonic_major, mixolydian, minor
+    Prioritizes artist archetype preferred scales when provided.
     """
     if rng is None:
         rng = SeededRNG()
@@ -76,8 +76,13 @@ def select_scale(
 
     # Build weights based on source features and genre directives
     weights = []
+    preferred_set = set(preferred_scale_types or [])
     for st in scale_types:
         w = 1.0
+
+        if st in preferred_set:
+            w += 20.0  # Strongly favor the artist archetype's signature scale
+
 
         if pref in ["trap", "drill"]:
             if st in ["phrygian", "harmonic_minor"]:

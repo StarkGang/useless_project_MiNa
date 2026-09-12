@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>THE UNNECESSARY FM</title>
   <meta name="description"
-    content="Turns random noise into music. Record or upload, click Create Music and ta daa... your music is ready using Pure DSP Processing! 100% algorithmic procedural audio synthesis. Team MiNa • TinkerHub Useless Projects 3.0">
+    content="Turns random noise into music! Just record or upload it, push Create Music and there you have it... your music is ready, all thanks to audio math!. Team MiNa • TinkerHub Useless Projects 3.0">
   <meta name="api-base-url" content="">
   <meta name="application-name" content="TheUnnecessaryFM">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,7 +40,7 @@
           </div>
           <div class="logo-text">
             <span class="logo-name">THE UNNECESSARY FM</span>
-            <span class="logo-badge">DSP STUDIO</span>
+            <span class="logo-badge">SOUND LAB</span>
           </div>
         </a>
 
@@ -75,8 +75,8 @@
               </svg>
             </div>
             <div class="lib-info">
-              <span class="lib-title" id="libTrackTitle">Active Composition</span>
-              <span class="lib-desc" id="libTrackMeta">Procedural 30s Stream</span>
+              <span class="lib-title" id="libTrackTitle">Active Track</span>
+              <span class="lib-desc" id="libTrackMeta">Your Produced Tune (30s)</span>
             </div>
           </div>
 
@@ -89,7 +89,7 @@
             </div>
             <div class="lib-info">
               <span class="lib-title" id="libSourceTitle">Source Sound</span>
-              <span class="lib-desc" id="libSourceMeta">Raw Input Audio</span>
+              <span class="lib-desc" id="libSourceMeta">Original Noise</span>
             </div>
           </div>
         </div>
@@ -107,8 +107,8 @@
           </div>
           <div class="credits-tags">
             <span class="pill-chip">FastAPI</span>
-            <span class="pill-chip">NumPy/DSP</span>
-            <span class="pill-chip">Pure DSP</span>
+            <span class="pill-chip">NumPy</span>
+            <span class="pill-chip">Audio DSP</span>
           </div>
           <div class="credits-repo">
             <a href="https://github.com/nayanapottekkad/useless_project_MiNa/" target="_blank" rel="noopener noreferrer" class="repo-link-sidebar">
@@ -173,7 +173,7 @@
               <h1 class="hero-title">THE UNNECESSARY FM</h1>
 
               <p class="hero-tagline">
-                THE UNNECESSARY FM turns random noise into music.. you record or upload, click Create Music and ta daa... your music is ready using Pure DSP Processing!
+                Turns random noise into music, just record or upload it, push the Create Music button and Ta-da!! your music is ready, all thanks to audio math (DSP / Digital Signal Processing)!
               </p>
 
               <div class="hero-actions-row">
@@ -195,7 +195,7 @@
         <section class="studio-section" id="studioSection">
           <div class="section-title-row">
             <h2>Creation Studio</h2>
-            <span class="step-indicator">Step 1: Upload or Record Sound &bull; Step 2: Choose Style &bull; Step 3: Create Music</span>
+            <span class="step-indicator">Step 1: Upload or Record Noise &bull; Step 2: Pick Your Vibe &bull; Step 3: Create Music</span>
           </div>
 
           <div class="studio-cards-row">
@@ -204,7 +204,7 @@
               <div class="card-title-bar">
                 <div class="title-with-num">
                   <span class="badge-num">1</span>
-                  <h3>Source Sound Input</h3>
+                  <h3>Drop Your Noise Here</h3>
                   <!-- Small 'i' Info Button with Hover Sound Guide Popover -->
                   <div class="info-tooltip-wrapper" id="soundGuideTooltipWrap" tabindex="0">
                     <button type="button" class="btn-info-icon" id="soundGuideInfoBtn" aria-label="Audio Guide &amp; Sound Tips">
@@ -216,12 +216,12 @@
                     </button>
                     <div class="info-tooltip-popover" role="tooltip">
                       <div class="popover-title">Sound Guide</div>
-                      <p>Works best with audible sounds — speech, singing, street chatter, claps, or percussion.</p>
-                      <div class="popover-tip">💡 Tip: Avoid silence or faint fan hums for rich musical output.</div>
+                      <p>Works best with audible sounds like speech, singing, street chatter, claps, or percussion.</p>
+                      <div class="popover-tip">💡 Tip: Avoid complete silence or faint fan hums so the math has real notes to find!</div>
                     </div>
                   </div>
                 </div>
-                <span class="card-hint">Audible noise gives the best music</span>
+                <span class="card-hint">Audible sounds work best!</span>
               </div>
 
               <!-- Drag & Drop Zone -->
@@ -236,7 +236,7 @@
                     </svg>
                   </div>
                   <p class="drop-prompt"><strong>Drag and drop audio file</strong> or <span class="highlight">browse</span></p>
-                  <span class="file-hint">Works best with audible sounds (traffic, chatter, voice, percussion) &bull; WAV, MP3, FLAC, M4A up to <span id="uploadLimitHint">15MB</span></span>
+                  <span class="file-hint">Works best with audible sounds (traffic, chatter, voice, claps) &bull; WAV, MP3, FLAC, M4A up to <span id="uploadLimitHint">15MB</span></span>
                 </div>
 
                 <!-- File Info Pill (Shown when file is chosen) -->
@@ -259,12 +259,12 @@
               <!-- Microphone Recording Option -->
               <div class="mic-section">
                 <div class="mic-divider">
-                  <span>OR RECORD ACOUSTIC NOISE</span>
+                  <span>OR RECORD YOUR NOISE RIGHT NOW</span>
                 </div>
                 <div class="mic-controls">
                   <button type="button" class="btn-pill-mic" id="btnRecord">
                     <span class="record-dot"></span>
-                    <span id="recordBtnText">Record Mic (Speak, Clap, or Play Sound)</span>
+                    <span id="recordBtnText">Record Mic (Speak, Clap, Count, or Beatbox)</span>
                   </button>
                   <div class="rec-timer hidden" id="recTimer">
                     <span class="rec-pulse"></span>
@@ -272,7 +272,7 @@
                     <span class="rec-max">/ 01:00 MAX</span>
                   </div>
                 </div>
-                <span class="mic-guidance-hint">💡 Tip: Speak words aloud, sing, clap, or record ambient noise for 5–20s at audible volume</span>
+                <span class="mic-guidance-hint">💡 Tip: Say hello, count numbers, clap, or record room chatter for 5–20s</span>
                 <canvas id="liveMicCanvas" class="live-mic-canvas hidden" width="360" height="40"></canvas>
               </div>
             </div>
@@ -282,14 +282,14 @@
               <div class="card-title-bar">
                 <div class="title-with-num">
                   <span class="badge-num">2</span>
-                  <h3>Composition Directives</h3>
+                  <h3>Music &amp; Vibe Settings</h3>
                 </div>
-                <span class="card-hint">Fine-tune rhythm &amp; energy</span>
+                <span class="card-hint">Pick your beat and mood</span>
               </div>
 
               <div class="directives-body">
                 <div class="form-group">
-                  <label for="beatSelect">Genre &amp; Beat Arrangement</label>
+                  <label for="beatSelect">What should your noise become?</label>
                   <div class="select-wrapper">
                     <select id="beatSelect" class="spotify-select">
                       <option value="pop" selected>✨ Pop (122 BPM, 4-on-the-Floor, 16th Electro Bass, Foley Chops)</option>
@@ -304,10 +304,39 @@
                   </div>
                 </div>
 
+                <div class="form-group">
+                  <div class="label-with-action">
+                    <div class="label-info-group">
+                      <label for="styleSelect">Sound Style Archetype</label>
+                      <div class="info-tooltip-wrapper" id="styleInfoTooltipWrap" tabindex="0">
+                        <button type="button" class="btn-info-icon" id="styleInfoBtn" aria-label="Category Sound Style Archetype Guide">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                          </svg>
+                        </button>
+                        <div class="info-tooltip-popover energy-info-popover" role="tooltip">
+                          <div class="popover-title">Category Styles</div>
+                          <div class="popover-item">Filtered strictly to your selected category above (e.g. Pop shows only Pop styles).</div>
+                          <div class="popover-item">Change <strong>"What should your noise become?"</strong> to browse archetypes for other genres.</div>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="hint" id="styleCountHint">(Pop Styles)</span>
+                  </div>
+                  <div class="select-wrapper">
+                    <select id="styleSelect" class="spotify-select">
+                      <option value="" selected>🎲 Auto-Cycle (Surprise Me / Non-Repeating)</option>
+                    </select>
+                  </div>
+                  <span class="energy-helper-note" id="styleHelperNote">✨ Auto-cycles unplayed styles dynamically on each roll</span>
+                </div>
+
                 <div class="form-row">
                   <div class="form-group flex-1">
                     <div class="label-with-action">
-                      <label for="energySelect">Dynamic Energy</label>
+                      <label for="energySelect">Energy &amp; Pace</label>
                       <div class="info-tooltip-wrapper" id="energyInfoTooltipWrap" tabindex="0">
                         <button type="button" class="btn-info-icon" id="energyInfoBtn" aria-label="Dynamic Energy Mode Guide">
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
@@ -317,7 +346,7 @@
                           </svg>
                         </button>
                         <div class="info-tooltip-popover energy-info-popover" role="tooltip">
-                          <div class="popover-title">Dynamic Energy</div>
+                          <div class="popover-title">Energy Level</div>
                           <div class="popover-item"><strong>Subtle:</strong> Spacious tempo &amp; ambient room</div>
                           <div class="popover-item"><strong>Balanced:</strong> Classic structure &amp; even groove</div>
                           <div class="popover-item"><strong>High:</strong> Faster BPM, punchy drums &amp; dense build-ups</div>
@@ -331,7 +360,7 @@
                         <option value="high">High Dynamics</option>
                       </select>
                     </div>
-                    <span class="energy-helper-note" id="energyHelperNote">🍃 Spacious tempo &amp; phrasing — lets your input noise take center stage</span>
+                    <span class="energy-helper-note" id="energyHelperNote">🍃 Relaxed pace &amp; spacing — lets your input noise shine</span>
                   </div>
 
                   <div class="form-group flex-1">
@@ -344,6 +373,22 @@
                     </div>
                     <input type="number" id="seedInput" class="spotify-input" placeholder="e.g. 48192049">
                   </div>
+                </div>
+
+                <!-- Vocal Extraction & Auto-Tune Mode -->
+                <div class="form-group">
+                  <div class="label-with-action">
+                    <label for="vocalModeSelect">Vocal &amp; Speech Mode</label>
+                    <span class="hint">Keep lyrics intact vs. chops</span>
+                  </div>
+                  <div class="select-wrapper">
+                    <select id="vocalModeSelect" class="spotify-select">
+                      <option value="auto" selected>✨ Smart Auto (Preserve Full Lyrics — Recommended)</option>
+                      <option value="lead">🎙️ Lead Vocal (100% Continuous Unbroken Take &amp; Lyrics)</option>
+                      <option value="chops">✂️ Rhythmic Chops (Fast Soul Syllable Chops)</option>
+                    </select>
+                  </div>
+                  <span class="energy-helper-note" id="vocalHelperNote">✨ Automatically plays full continuous lyrics without cutting off words or chopping</span>
                 </div>
 
                 <!-- Duration Toggle -->
@@ -374,7 +419,7 @@
                     <span id="generateBtnLabel">CREATE MUSIC (30s)</span>
                   </button>
                   <p class="generate-disclaimer">
-                    <span>Your noise transformed into music &mdash; 100% procedural DSP</span>
+                    <span>Transforms your noise into a full track</span>
                   </p>
                 </div>
               </div>
@@ -488,8 +533,8 @@
                 <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
               </div>
             </div>
-            <h3>Awaiting Sound Input</h3>
-            <p>Upload any ordinary noise or record through your mic. The procedural DSP engine will extract pitch, transients, and timbre to compose a unique track from your sound.</p>
+            <h3>Waiting for some noise!</h3>
+            <p>Record your voice, clap, or drop any noisy audio file above. Our math algorithms will chop it up, find the rhythm, and turn it into music.</p>
           </div>
 
           <!-- Processing State with Animated 3D Gramophone to Top-View Spinning Loader -->
@@ -568,7 +613,7 @@
                 <span class="progress-percent" id="progressPercent">15%</span>
               </div>
               <h3 id="progressStage">Analyzing acoustic DNA &amp; spectral timbre...</h3>
-              <p class="processing-quote" id="processingQuote">"The world is full of perfectly ordinary noises, but for some reason, they aren't songs. We decided this was unacceptable."</p>
+              <p class="processing-quote" id="processingQuote">"Wish these loud honking noises would become music instead! And can you believe it, that's when we had this eureka moment."</p>
             </div>
             <div class="progress-bar-track">
               <div class="progress-bar-fill" id="progressBarFill"></div>
@@ -578,8 +623,8 @@
             <div class="hosting-note-card">
               <div class="hosting-note-icon">💡</div>
               <div class="hosting-note-body">
-                <strong>Pure Procedural Synthesis</strong>
-                <p>Turning ordinary noise into music requires real mathematical signal processing (FFT, resonant filters, transient segmentation). It may take a little time on free cloud tiers and that is completely normal!</p>
+                <strong>Real Math at Work</strong>
+                <p>Turning ordinary noise into music takes actual math and frequency slicing (Fourier transforms, filters, and beat grids). It might take a few moments on free cloud servers, but good tunes take time!</p>
                 <div class="hosting-note-links">
                   <span>Full 1-Minute Engine available in the original source:</span>
                   <a href="https://github.com/nayanapottekkad/useless_project_MiNa" target="_blank" rel="noopener noreferrer" class="github-repo-link">
@@ -596,8 +641,8 @@
             <!-- Candidate Switcher Header -->
             <div class="results-header-bar">
               <div class="res-title-group">
-                <span class="res-eyebrow">COMPOSITION SUITE</span>
-                <h2>Synthesized Candidates</h2>
+                <span class="res-eyebrow">TA-DAA! YOUR SONG IS READY</span>
+                <h2>Generated Tracks</h2>
               </div>
 
               <div class="candidate-tabs" id="candidateTabs">
@@ -612,14 +657,28 @@
                   <span>Candidate C</span>
                 </button>
               </div>
+
+              <button type="button" class="btn-reroll-artist" id="btnRerollArtist" title="Try another sound archetype from this noise!">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                <span>🎲 Try Another Style</span>
+              </button>
             </div>
 
             <!-- Candidate Metadata Bar -->
             <div class="composition-meta-banner">
+              <div class="meta-card highlight-card">
+                <span class="meta-label">SOUND ARCHETYPE</span>
+                <span class="meta-val highlight" id="metaArtist">80s Pop Synth Ostinato</span>
+              </div>
               <div class="meta-card">
                 <span class="meta-label">GENRE</span>
                 <span class="meta-val highlight" id="metaGenre">Hip Hop</span>
               </div>
+
               <div class="meta-card">
                 <span class="meta-label">TEMPO</span>
                 <span class="meta-val" id="metaTempo">94 BPM</span>
@@ -647,6 +706,17 @@
               <div class="meta-card seed-card" title="Click to copy seed to clipboard">
                 <span class="meta-label">SEED</span>
                 <span class="meta-val code-font" id="metaSeed" title="Click to copy seed">49201948</span>
+              </div>
+            </div>
+
+            <!-- Smart Extraction & Auto-Tune Banner -->
+            <div class="smart-extraction-banner" id="smartExtractionBanner">
+              <div class="smart-tag">
+                <span class="smart-icon">✨</span>
+                <span class="smart-title" id="smartExtractionTitle">Smart Audio Extraction</span>
+              </div>
+              <div class="smart-details" id="smartExtractionDetails">
+                Scale Auto-Tune Active • Custom Transient Punch • Best Settings Applied
               </div>
             </div>
 
@@ -755,7 +825,7 @@
               <div class="waveform-card result-wave-card">
                 <div class="wf-header">
                   <div class="wf-info">
-                    <span class="wf-tag tag-res">TRANSFORMED COMPOSITION [B]</span>
+                    <span class="wf-tag tag-res">PRODUCED SONG [B]</span>
                     <span class="wf-name" id="resFormDisplay">Intro &rarr; A &rarr; B &rarr; A &rarr; Outro</span>
                   </div>
                   <span class="wf-time" id="resTimeDisplay">00:00 / 01:00</span>
@@ -770,7 +840,7 @@
                   <div class="action-left">
                     <button type="button" class="btn-wf-play-main" id="btnPlayResult">
                       <span id="resPlayIcon"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15" style="display:block;"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
-                      <span id="resPlayText">Play Composition</span>
+                      <span id="resPlayText">Play Track</span>
                     </button>
                     <button type="button" class="btn-wf-skip" id="btnSkipBackResult" title="Rewind 5s">
                       <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
@@ -785,7 +855,7 @@
                       <span>Download WAV</span>
                     </a>
                   </div>
-                  <span class="wf-hint">100% Algorithmic procedural transformation</span>
+                  <span class="wf-hint">Algorithmic transformation</span>
                 </div>
               </div>
             </div>
@@ -794,10 +864,10 @@
             <div class="stem-architecture-card">
               <div class="stem-card-header">
                 <div class="stem-title-group">
-                  <span class="stem-eyebrow">PURE DSP SIGNAL FLOW</span>
-                  <h3>How Your Noise Was Re-engineered Into Music</h3>
+                  <span class="stem-eyebrow">BEHIND THE SCENES</span>
+                  <h3>How We Turned Your Noise Into Music</h3>
                 </div>
-                <span class="stem-pill-badge">100% Pure DSP Signal Processing</span>
+                <span class="stem-pill-badge">Signal Flow &amp; Stems</span>
               </div>
 
               <div class="stem-grid" id="stemGrid">
@@ -966,6 +1036,10 @@
                 <span class="b-key">Classification</span>
                 <span class="b-val" id="dnaClassReason">High spectral flatness</span>
               </li>
+              <li id="smartExtractionRow">
+                <span class="b-key">Smart Extraction</span>
+                <span class="b-val highlight" id="dnaSmartExtraction">✨ Auto-Tuner Active</span>
+              </li>
               <li>
                 <span class="b-key">Arrangement Form</span>
                 <span class="b-val" id="dnaFormName">Atmosphere &rarr; Pulse &rarr; Space &rarr; Climax</span>
@@ -1046,12 +1120,17 @@
           <div class="player-slider-fill" id="playerSliderFill"></div>
           <div class="player-slider-thumb" id="playerSliderThumb"></div>
         </div>
-        <span class="player-time" id="playerTotalDuration">01:00</span>
+        <span class="player-time" id="playerTotalDuration">00:30</span>
       </div>
     </div>
 
     <!-- Right: Secondary Controls (Panel toggle, Volume, Download) -->
     <div class="player-right">
+      <button type="button" class="btn-player-quick-reroll" id="bottomPlayerReroll" title="Instantly roll another random sound archetype from this noise!">
+        <span class="reroll-dice">🎲</span>
+        <span class="reroll-label">Try Another Style</span>
+      </button>
+
       <button type="button" class="btn-player-ctrl" id="playerBtnTogglePanel" title="Toggle DNA &amp; Details Panel">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
       </button>
