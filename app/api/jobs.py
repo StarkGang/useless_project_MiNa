@@ -74,7 +74,7 @@ class JobManager:
         num_candidates: Optional[int] = None
     ) -> JobRecord:
         job_id = uuid.uuid4().hex[:10]
-        eff_cands = num_candidates or int(os.environ.get("NUM_CANDIDATES", "3"))
+        eff_cands = num_candidates or int(os.environ.get("NUM_CANDIDATES", "2"))
         eff_cands = max(1, min(eff_cands, 5))
         job = JobRecord(
             job_id=job_id,
@@ -154,7 +154,7 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
         job_manager.update_job(job_id, analysis=analysis_data, source_duration=prep.duration, progress=50)
 
         # Step 3: Procedural Composition (candidates count configurable)
-        cands_count = job.num_candidates or 3
+        cands_count = job.num_candidates or 2
         stage_text = f"Procedurally synthesizing {cands_count} musical candidate{'s' if cands_count > 1 else ''}..."
         job_manager.update_job(job_id, stage=stage_text, progress=60)
         winner, all_candidates = generate_candidates(

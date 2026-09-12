@@ -575,7 +575,8 @@
 
       currentResultData = await res.json();
       renderCompositionUI(currentResultData);
-      showToast('1-minute music composition synthesized across 3 candidates!', 'success', 'TA DAA!');
+      const candCount = (currentResultData.candidates && currentResultData.candidates.length) || 2;
+      showToast(`1-minute music composition synthesized across ${candCount} candidates!`, 'success', 'TA DAA!');
 
     } catch (err) {
       showToast(err.message, 'error', 'LOAD ERROR');

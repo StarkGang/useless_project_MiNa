@@ -450,7 +450,7 @@ def generate_candidates(
     base_seed: Optional[int] = None,
     beat_preference: str = "minimal",
     energy_preference: str = "balanced",
-    num_candidates: int = 3,
+    num_candidates: int = 2,
     on_progress: Optional[Any] = None
 ) -> Tuple[CompositionResult, List[CompositionResult]]:
     """Generates candidates with independent seeds, ranked by score."""
