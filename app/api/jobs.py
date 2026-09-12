@@ -68,7 +68,7 @@ class JobRecord:
     winner_result: Optional[Dict[str, Any]] = None
     candidates: Optional[List[Dict[str, Any]]] = None
     beat_preference: str = "pop"
-    energy_preference: str = "balanced"
+    energy_preference: str = "low"
     custom_seed: Optional[int] = None
     num_candidates: Optional[int] = None
     target_duration: float = 30.0
@@ -152,7 +152,7 @@ class JobManager:
         self,
         source_filename: str,
         beat_preference: str = "pop",
-        energy_preference: str = "balanced",
+        energy_preference: str = "low",
         custom_seed: Optional[int] = None,
         num_candidates: Optional[int] = None,
         target_duration: float = 30.0
@@ -348,7 +348,7 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
 async def submit_generation_job(
     input_file_path: str,
     beat_preference: str = "pop",
-    energy_preference: str = "balanced",
+    energy_preference: str = "low",
     custom_seed: Optional[int] = None,
     num_candidates: Optional[int] = None,
     target_duration: float = 30.0

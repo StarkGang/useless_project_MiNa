@@ -221,16 +221,24 @@
                 <div class="title-with-num">
                   <span class="badge-num">1</span>
                   <h3>Source Sound Input</h3>
+                  <!-- Small 'i' Info Button with Hover Sound Guide Popover -->
+                  <div class="info-tooltip-wrapper" id="soundGuideTooltipWrap" tabindex="0">
+                    <button type="button" class="btn-info-icon" id="soundGuideInfoBtn" aria-label="Audio Guide &amp; Sound Tips" title="Sound Guide • What works best">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                      </svg>
+                    </button>
+                    <div class="info-tooltip-popover" role="tooltip">
+                      <div class="notice-badge">🔊 SOUND GUIDE &bull; WHAT WORKS BEST</div>
+                      <p><strong>Make sure your audio is clearly audible!</strong> The procedural DSP engine extracts pitch, transients, and rhythm from your sound.</p>
+                      <p class="popover-tips"><strong>Great sounds:</strong> Street traffic, loud room chatter, speaking words aloud, singing, clapping, keys, banging pots.</p>
+                      <p class="popover-warning"><em>⚠️ Avoid faint static, silent rooms, faint fan hums, or quiet mouse clicks — if the sound is too low, the music won't have enough signal to build from!</em></p>
+                    </div>
+                  </div>
                 </div>
                 <span class="card-hint">Audible noise gives the best music</span>
-              </div>
-
-              <!-- Audio Input Quality & Volume Notice -->
-              <div class="audio-input-notice">
-                <div class="notice-badge">🔊 SOUND GUIDE &bull; WHAT WORKS BEST</div>
-                <p><strong>Make sure your audio is clearly audible!</strong> The procedural DSP engine extracts pitch, transients, and rhythm from your sound.
-                <br><strong>Great sounds:</strong> Street traffic, loud room chatter, speaking words aloud, singing, clapping, keys, banging pots.
-                <br><em>⚠️ Avoid faint static, silent rooms, faint fan hums, or quiet mouse clicks — if the sound is too low, the music won't have enough signal to build from!</em></p>
               </div>
 
               <!-- Drag & Drop Zone -->
@@ -315,14 +323,50 @@
 
                 <div class="form-row">
                   <div class="form-group flex-1">
-                    <label for="energySelect">Dynamic Energy</label>
+                    <div class="label-with-action">
+                      <label for="energySelect">Dynamic Energy</label>
+                      <div class="info-tooltip-wrapper" id="energyInfoTooltipWrap" tabindex="0">
+                        <button type="button" class="btn-info-icon" id="energyInfoBtn" aria-label="Dynamic Energy Mode Guide" title="Dynamic Energy Guide • What each mode does">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                          </svg>
+                        </button>
+                        <div class="info-tooltip-popover energy-info-popover" role="tooltip">
+                          <div class="notice-badge">⚡ DYNAMIC ENERGY MODES</div>
+                          <div class="energy-mode-list">
+                            <div class="energy-mode-card is-default">
+                              <div class="energy-mode-head">
+                                <span class="energy-mode-name">Subtle &amp; Ambient</span>
+                                <span class="mode-badge-default">Default</span>
+                              </div>
+                              <p>Gentle tempo &amp; spacious arrangement. Maximizes room for your raw noise to be heard clearly so you feel and hear the algorithm turning your input sound into music.</p>
+                            </div>
+                            <div class="energy-mode-card">
+                              <div class="energy-mode-head">
+                                <span class="energy-mode-name">Balanced Arc</span>
+                              </div>
+                              <p>Standard genre tempo with classic song structure (intro, build, hook, outro) blending source noise and synthesized groove equally.</p>
+                            </div>
+                            <div class="energy-mode-card">
+                              <div class="energy-mode-head">
+                                <span class="energy-mode-name">High Dynamics</span>
+                              </div>
+                              <p>Faster tempo (+8%), denser note sequences, punchy drum transients, and high-energy build-ups for maximum intensity.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <div class="select-wrapper">
                       <select id="energySelect" class="spotify-select">
-                        <option value="balanced" selected>Balanced Arc</option>
-                        <option value="low">Subtle &amp; Ambient</option>
+                        <option value="low" selected>Subtle &amp; Ambient</option>
+                        <option value="balanced">Balanced Arc</option>
                         <option value="high">High Dynamics</option>
                       </select>
                     </div>
+                    <span class="energy-helper-note" id="energyHelperNote">🍃 Spacious tempo &amp; phrasing — lets your input noise take center stage</span>
                   </div>
 
                   <div class="form-group flex-1">
@@ -354,15 +398,17 @@
 
                 <!-- Generate CTA Button -->
                 <div class="generate-cta-wrap">
-                  <button type="button" class="btn-spotify-generate" id="btnGenerate" disabled>
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                    </svg>
+                  <button type="button" class="btn-spotify-generate" id="btnGenerate" disabled title="Upload or record an audio sound first">
+                    <span class="btn-icon-wrap">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <polygon points="8 5 19 12 8 19 8 5"></polygon>
+                      </svg>
+                    </span>
                     <span id="generateBtnLabel">CREATE MUSIC (30s)</span>
                   </button>
                   <p class="generate-disclaimer">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                    Your noise transformed into music — 100% procedural DSP
+                    <span class="dsp-pulse-dot"></span>
+                    <span>Your noise transformed into music &mdash; 100% procedural DSP</span>
                   </p>
                 </div>
               </div>

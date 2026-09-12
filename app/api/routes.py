@@ -93,7 +93,7 @@ async def generate_music(
     file: Optional[UploadFile] = File(None),
     existing_job_id: Optional[str] = Form(None),
     beat_preference: str = Form("pop"),
-    energy_preference: str = Form("balanced"),
+    energy_preference: str = Form("low"),
     seed: Optional[str] = Form(None),
     num_candidates: Optional[int] = Form(None),
     duration_seconds: Optional[int] = Form(None)

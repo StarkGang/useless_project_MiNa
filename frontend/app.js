@@ -64,6 +64,60 @@
   const btnRandomizeSeed = document.getElementById('btnRandomizeSeed');
   const btnGenerate = document.getElementById('btnGenerate');
 
+  // Sound Guide Tooltip Toggle (supports mobile tap & keyboard Escape)
+  const soundGuideInfoBtn = document.getElementById('soundGuideInfoBtn');
+  const soundGuideTooltipWrap = document.getElementById('soundGuideTooltipWrap');
+  if (soundGuideInfoBtn && soundGuideTooltipWrap) {
+    soundGuideInfoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      soundGuideTooltipWrap.classList.toggle('active');
+    });
+    document.addEventListener('click', (e) => {
+      if (!soundGuideTooltipWrap.contains(e.target)) {
+        soundGuideTooltipWrap.classList.remove('active');
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        soundGuideTooltipWrap.classList.remove('active');
+      }
+    });
+  }
+
+  // Dynamic Energy Info Tooltip Toggle (supports mobile tap & keyboard Escape)
+  const energyInfoBtn = document.getElementById('energyInfoBtn');
+  const energyInfoTooltipWrap = document.getElementById('energyInfoTooltipWrap');
+  if (energyInfoBtn && energyInfoTooltipWrap) {
+    energyInfoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      energyInfoTooltipWrap.classList.toggle('active');
+    });
+    document.addEventListener('click', (e) => {
+      if (!energyInfoTooltipWrap.contains(e.target)) {
+        energyInfoTooltipWrap.classList.remove('active');
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        energyInfoTooltipWrap.classList.remove('active');
+      }
+    });
+  }
+
+  // Dynamic Energy helper note synchronization
+  const energyHelperNote = document.getElementById('energyHelperNote');
+  const energyDescriptions = {
+    'low': '🍃 Spacious tempo & phrasing — lets your input noise take center stage',
+    'balanced': '⚖️ Classic song structure balancing source noise with synth groove',
+    'high': '⚡ Faster tempo, denser phrasing & energetic build-ups'
+  };
+
+  if (energySelect && energyHelperNote) {
+    energySelect.addEventListener('change', () => {
+      energyHelperNote.textContent = energyDescriptions[energySelect.value] || '';
+    });
+  }
+
   // Generation & Status UI Elements
   const emptyState = document.getElementById('emptyState');
   const processingState = document.getElementById('processingState');
@@ -315,7 +369,11 @@
     if (selectedFileSize) selectedFileSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
     if (dropZoneContent) dropZoneContent.classList.add('hidden');
     if (selectedFilePill) selectedFilePill.classList.remove('hidden');
-    if (btnGenerate) btnGenerate.disabled = false;
+    if (btnGenerate) {
+      btnGenerate.disabled = false;
+      btnGenerate.title = 'Create procedural music from audio';
+      btnGenerate.classList.add('ready');
+    }
 
     // Update Player & Library state
     if (playerTrackTitle) playerTrackTitle.textContent = file.name;
@@ -332,6 +390,8 @@
     if (dropZoneContent) dropZoneContent.classList.remove('hidden');
     if (!currentJobId && btnGenerate) {
       btnGenerate.disabled = true;
+      btnGenerate.title = 'Upload or record audio on the left first';
+      btnGenerate.classList.remove('ready');
     }
   }
 
@@ -505,7 +565,10 @@
       const g = card.dataset.genre;
       const e = card.dataset.energy;
       if (g && beatSelect) beatSelect.value = g;
-      if (e && energySelect) energySelect.value = e;
+      if (e && energySelect) {
+        energySelect.value = e;
+        if (energyHelperNote) energyHelperNote.textContent = energyDescriptions[e] || '';
+      }
       const title = card.querySelector('h3') ? card.querySelector('h3').textContent : g;
       showToast(`Selected style: ${title}. Choose an audio file and hit Create!`, 'info', 'STYLE PRESET');
 
@@ -518,15 +581,29 @@
   });
 
   // Quick filter search
-  if (quickFilterInput) {
-    quickFilterInput.addEventListener('input', (e) => {
+  const genreSearchInput = document.getElementById('genreSearchInput');
+  if (genreSearchInput) {
+    genreSearchInput.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
       document.querySelectorAll('.preset-card').forEach(card => {
         const text = card.textContent.toLowerCase();
-        card.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+        card.style.display = (!q || text.includes(q)) ? '' : 'none';
       });
     });
   }
+
+  // Quick Mode Chips in Hero
+  document.querySelectorAll('.mode-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const genre = chip.dataset.genre;
+      if (genre && beatSelect) {
+        beatSelect.value = genre;
+        document.querySelectorAll('.mode-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        showToast(`Genre directive set: ${chip.textContent.trim()}`, 'success', 'GENRE DIRECTIVE');
+      }
+    });
+  });
 
   // Navigation Links
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -607,7 +684,7 @@
     }
 
     formData.append('beat_preference', beatSelect ? beatSelect.value : 'pop');
-    formData.append('energy_preference', energySelect ? energySelect.value : 'balanced');
+    formData.append('energy_preference', energySelect ? energySelect.value : 'low');
     formData.append('duration_seconds', String(selectedDuration));
     if (seedInput && seedInput.value.trim()) {
       formData.append('seed', seedInput.value.trim());

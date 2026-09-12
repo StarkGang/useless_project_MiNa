@@ -120,7 +120,7 @@ def render_candidate_composition(
     analysis: CompleteAnalysis,
     seed: int,
     beat_preference: str = "pop",
-    energy_preference: str = "balanced",
+    energy_preference: str = "low",
     palette: Optional[SourcePalette] = None,
     shared_pad: Optional[np.ndarray] = None,
     on_progress: Optional[Any] = None,
@@ -769,7 +769,7 @@ def generate_candidates(
     analysis: CompleteAnalysis,
     base_seed: Optional[int] = None,
     beat_preference: str = "pop",
-    energy_preference: str = "balanced",
+    energy_preference: str = "low",
     num_candidates: int = 1,
     on_progress: Optional[Any] = None,
     target_duration: float = 30.0

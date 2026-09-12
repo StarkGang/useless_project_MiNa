@@ -3,7 +3,7 @@
 # THE UNNECESSARY FM 📻✨
 
 > **Turns random, everyday noise into full produced songs using 100% procedural Digital Signal Processing (DSP).**  
-> Record street traffic, loud room chatter, speaking words aloud, or clapping keys — ta daa... your song is ready!
+> Record street traffic, loud room chatter, speaking words aloud, or clapping and ta daa... your song is ready!
 
 ---
 
@@ -22,17 +22,15 @@
 
 ## Project Description
 
-**THE UNNECESSARY FM** takes ordinary acoustic noise and re-engineers it into structured, multi-stem musical tracks using **100% pure algorithmic Digital Signal Processing (DSP)**.
-
-No cloud generative AI, no heavy neural network weights, no generic MIDI packs — just pure acoustic mathematics. The engine extracts pitch fundamentals, spectral centroids, rhythmic transients, and harmonic beds directly from your microphone or audio upload, chops them into musical micro-slices, maps them to modal chord progressions, and arranges them into complete radio-ready compositions (Pop, French-Touch Rap, Boom-Bap Hip Hop, Trap 808s, Progressive House, and Ambient Drones).
+**THE UNNECESSARY FM** takes ordinary noises that you hear all around you uhhh and turns it into a song using **pure algorithmic Digital Signal Processing (DSP)**.
 
 ---
 
 ## The Problem (that doesn't exist)
 
-The world is overflowing with perfectly fine noise — honking auto-rickshaws, loud cafeteria chatter, squeaky swivel chairs, kitchen utensils clattering, and people muttering incoherent syllables to themselves while coding. 
+The world is overflowing with perfectly fine noises like loud honking auto-rickshaws, loud cafeteria chatter, squeaky swivel chairs, kitchen utensils clattering, and people muttering incoherent syllables to themselves while coding. 
 
-Yet shockingly, none of these noises are on Spotify, none of them have a drop, and zero of them feature a French-touch resonant filter sweep. We decided this gross cosmic oversight was entirely unacceptable.
+Yet shockingly, none of these noises are on Spotify or apple music or any where you would like to hear them. We decided this was unacceptable.
 
 ---
 
