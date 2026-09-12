@@ -72,13 +72,9 @@ def analyze_pitch(audio: np.ndarray, sr: int = 44100) -> PitchFeatures:
         )
 
     # 1. Chromagram analysis (energy per pitch class across time)
-    # Using librosa.feature.chroma_stft with harmonic-percussive separation for clarity
-    try:
-        y_harm = librosa.effects.harmonic(y=audio, margin=2.5)
-    except Exception:
-        y_harm = audio
-
-    chroma = librosa.feature.chroma_stft(y=y_harm, sr=sr, n_fft=4096, hop_length=1024)
+    # Fast windowed chroma without heavy 2D HPSS median filtering
+    analysis_chunk = audio[:min(len(audio), sr * 8)]
+    chroma = librosa.feature.chroma_stft(y=analysis_chunk, sr=sr, n_fft=2048, hop_length=1024)
     chroma_mean = np.mean(chroma, axis=1)  # shape (12,)
     chroma_sum = np.sum(chroma_mean)
     if chroma_sum > 0:
@@ -88,10 +84,10 @@ def analyze_pitch(audio: np.ndarray, sr: int = 44100) -> PitchFeatures:
 
     # 2. Fundamental Frequency (F0) estimation via Autocorrelation & Harmonic Peaks
     # Analyze middle chunk (up to 4 seconds) to balance accuracy and speed
-    center = len(y_harm) // 2
-    chunk_len = min(len(y_harm), sr * 4)
+    center = len(audio) // 2
+    chunk_len = min(len(audio), sr * 4)
     start = max(0, center - chunk_len // 2)
-    chunk = y_harm[start:start + chunk_len]
+    chunk = audio[start:start + chunk_len]
 
     # Downsample chunk to 16kHz for fast and accurate pitch tracking (fmax is 1000 Hz)
     target_sr = 16000 if sr > 16000 else sr

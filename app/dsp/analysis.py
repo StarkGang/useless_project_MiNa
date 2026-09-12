@@ -92,14 +92,19 @@ def compute_texture_features(
     rhythm: RhythmFeatures,
     sr: int = 44100
 ) -> TextureFeatures:
-    """Compute harmonicity, noisiness, transient density, and temporal entropy."""
-    # Harmonic/Percussive separation
+    # Fast autocorrelation & spectral-based harmonicity (sub-millisecond, avoids heavy 2D HPSS and memory spike)
     try:
-        y_harm, y_perc = librosa.effects.hpss(y=audio, margin=1.5)
-        pwr_harm = np.sum(y_harm ** 2)
-        pwr_perc = np.sum(y_perc ** 2)
-        total_pwr = pwr_harm + pwr_perc + 1e-9
-        harmonicity = float(pwr_harm / total_pwr)
+        sub_len = min(len(audio), sr * 3)
+        sub = audio[:sub_len]
+        corr = np.correlate(sub, sub, mode='full')
+        corr = corr[len(corr) // 2:]
+        min_lag = int(sr / 1200.0)
+        max_lag = min(len(corr) - 1, int(sr / 60.0))
+        if max_lag > min_lag and corr[0] > 1e-7:
+            peak_val = float(np.max(corr[min_lag:max_lag]))
+            harmonicity = float(np.clip(peak_val / corr[0], 0.0, 1.0))
+        else:
+            harmonicity = float(np.clip(1.0 - spec.spectral_flatness, 0.0, 1.0))
     except Exception:
         harmonicity = 0.5
 

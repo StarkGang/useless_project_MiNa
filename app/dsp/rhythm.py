@@ -76,12 +76,16 @@ def analyze_rhythm(audio: np.ndarray, sr: int = 44100) -> RhythmFeatures:
     estimated_tempo = 95.0
 
     try:
-        tempo_result = librosa.feature.rhythm.tempo(
-            onset_envelope=onset_env,
-            sr=sr,
-            hop_length=hop_length,
-            aggregate=None
-        )
+        tempo_fn = getattr(librosa.feature, "tempo", getattr(librosa.beat, "tempo", None))
+        if tempo_fn is not None:
+            tempo_result = tempo_fn(
+                onset_envelope=onset_env,
+                sr=sr,
+                hop_length=hop_length,
+                aggregate=None
+            )
+        else:
+            tempo_result = None
         if tempo_result is not None and len(tempo_result) > 0:
             bpm = float(np.median(tempo_result))
             # Keep BPM in musical range [60, 140], halving or doubling if necessary

@@ -39,10 +39,11 @@ def analyze_spectrum(audio: np.ndarray, sr: int = 44100) -> SpectralFeatures:
             brightness=0.5
         )
 
-    # Precompute shared magnitude spectrogram to avoid 5 redundant STFTs
-    n_fft = min(2048, max(256, 2 ** int(np.floor(np.log2(len(audio))))))
+    # Precompute shared magnitude spectrogram (capped to 10s to prevent out-of-memory on 512MB RAM hosts)
+    analysis_audio = audio[:min(len(audio), sr * 10)]
+    n_fft = min(2048, max(256, 2 ** int(np.floor(np.log2(len(analysis_audio))))))
     hop_length = 512
-    S = np.abs(librosa.stft(audio, n_fft=n_fft, hop_length=hop_length))
+    S = np.abs(librosa.stft(analysis_audio, n_fft=n_fft, hop_length=hop_length))
 
     # 1. Spectral Centroid
     centroids = librosa.feature.spectral_centroid(S=S, sr=sr)

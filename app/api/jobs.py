@@ -23,11 +23,21 @@ from ..dsp.preprocess import PreprocessedAudio, preprocess_audio
 from ..music.composer import CompositionResult, generate_candidates
 from ..utils.random import generate_seed
 
-UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
-OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "outputs"
+if os.environ.get("VERCEL"):
+    UPLOAD_DIR = Path("/tmp/uploads")
+    OUTPUT_DIR = Path("/tmp/outputs")
+else:
+    UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+    OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "outputs"
 
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    UPLOAD_DIR = Path("/tmp/uploads")
+    OUTPUT_DIR = Path("/tmp/outputs")
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -146,14 +156,15 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
         # Step 3: Procedural Composition (candidates count configurable)
         cands_count = job.num_candidates or 3
         stage_text = f"Procedurally synthesizing {cands_count} musical candidate{'s' if cands_count > 1 else ''}..."
-        job_manager.update_job(job_id, stage=stage_text, progress=65)
+        job_manager.update_job(job_id, stage=stage_text, progress=60)
         winner, all_candidates = generate_candidates(
             prep=prep,
             analysis=analysis,
             base_seed=job.custom_seed,
             beat_preference=job.beat_preference,
             energy_preference=job.energy_preference,
-            num_candidates=cands_count
+            num_candidates=cands_count,
+            on_progress=lambda pct, msg: job_manager.update_job(job_id, progress=pct, stage=msg)
         )
 
         job_manager.update_job(job_id, stage="Scoring candidates & mastering winner...", progress=85)

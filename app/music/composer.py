@@ -12,7 +12,7 @@ Turns ANY audio recording into a punchy, enjoyable, head-nodding ~60s musical co
 
 from dataclasses import dataclass
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from ..dsp.analysis import CompleteAnalysis
@@ -450,13 +450,14 @@ def generate_candidates(
     base_seed: Optional[int] = None,
     beat_preference: str = "minimal",
     energy_preference: str = "balanced",
-    num_candidates: int = 3
+    num_candidates: int = 3,
+    on_progress: Optional[Any] = None
 ) -> Tuple[CompositionResult, List[CompositionResult]]:
-    """Generates 3 candidates with independent seeds, ranked by score."""
+    """Generates candidates with independent seeds, ranked by score."""
     if base_seed is None:
         base_seed = generate_seed()
 
-    # Pre-extract palette once and reuse across all 3 candidates (saves redundant CPU/memory)
+    # Pre-extract palette once and reuse across all candidates (saves redundant CPU/memory)
     palette = build_source_palette(
         audio=prep.mono,
         sr=prep.sr,
@@ -469,7 +470,10 @@ def generate_candidates(
         seeds.append(generate_seed())
 
     candidates: List[CompositionResult] = []
-    for s in seeds:
+    for idx, s in enumerate(seeds):
+        if on_progress:
+            pct = 65 + int((idx / max(1, num_candidates)) * 20)
+            on_progress(pct, f"Procedurally synthesizing candidate {idx + 1} of {num_candidates}...")
         cand = render_candidate_composition(
             prep=prep,
             analysis=analysis,
