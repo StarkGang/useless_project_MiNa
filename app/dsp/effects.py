@@ -57,6 +57,8 @@ def ping_pong_delay(
     num_blocks = int(np.ceil(n_samples / d))
 
     b_damp, a_damp = signal.butter(1, min(0.45, 3800.0 / (sr * 0.5)), btype='low')
+    zi_l = signal.lfilter_zi(b_damp, a_damp) * 0.0
+    zi_r = signal.lfilter_zi(b_damp, a_damp) * 0.0
 
     for blk in range(1, num_blocks):
         start = blk * d
@@ -68,9 +70,11 @@ def ping_pong_delay(
         l_in = audio[1, prev_start:prev_end] + wet_right[prev_start:prev_end] * feedback
         r_in = audio[0, prev_start:prev_end] + wet_left[prev_start:prev_end] * feedback
 
-        # Damping
-        l_damped = signal.lfilter(b_damp, a_damp, l_in) * damping + l_in * (1.0 - damping)
-        r_damped = signal.lfilter(b_damp, a_damp, r_in) * damping + r_in * (1.0 - damping)
+        # Damping with continuous filter memory across block boundaries
+        l_filt, zi_l = signal.lfilter(b_damp, a_damp, l_in, zi=zi_l)
+        r_filt, zi_r = signal.lfilter(b_damp, a_damp, r_in, zi=zi_r)
+        l_damped = l_filt * damping + l_in * (1.0 - damping)
+        r_damped = r_filt * damping + r_in * (1.0 - damping)
 
         wet_left[start:end] = l_damped
         wet_right[start:end] = r_damped
@@ -250,44 +254,48 @@ def lookahead_limiter(
     # Fast 1D windowed maximum
     windowed_peak = maximum_filter1d(peak_signal, size=lookahead_samples * 2)
 
-    # Instant gain cut
-    gain = np.ones(n_samples, dtype=np.float32)
+    # Required gain to keep signal strictly within ceiling
+    target_gain = np.ones(n_samples, dtype=np.float32)
     over_limit = windowed_peak > ceiling
-    gain[over_limit] = ceiling / windowed_peak[over_limit]
+    target_gain[over_limit] = (ceiling / np.maximum(1e-6, windowed_peak[over_limit])).astype(np.float32)
 
-    # Fast release filter via decimation
-    hop = 32
-    gain_ds = np.min(gain[:len(gain) - (len(gain) % hop)].reshape(-1, hop), axis=1)
+    # Fast smooth release envelope with hop = 8 (~0.18ms resolution)
+    hop = 8
+    pad_len = (hop - (n_samples % hop)) % hop
+    if pad_len > 0:
+        gain_padded = np.pad(target_gain, (0, pad_len), mode='edge')
+    else:
+        gain_padded = target_gain
+
+    gain_blocks = np.min(gain_padded.reshape(-1, hop), axis=1)
     rel_coeff = float(np.exp(-hop / (sr * (release_ms / 1000.0))))
 
-    smooth_ds = np.ones(len(gain_ds), dtype=np.float32)
+    smooth_blocks = np.ones(len(gain_blocks), dtype=np.float32)
     curr_g = 1.0
-    for i in range(len(gain_ds)):
-        target_g = gain_ds[i]
-        if target_g < curr_g:
-            curr_g = target_g
+    for i in range(len(gain_blocks)):
+        bg = gain_blocks[i]
+        if bg < curr_g:
+            curr_g = bg
         else:
-            curr_g = rel_coeff * curr_g + (1.0 - rel_coeff) * target_g
-        smooth_ds[i] = curr_g
+            curr_g = rel_coeff * curr_g + (1.0 - rel_coeff) * bg
+        smooth_blocks[i] = curr_g
 
-    # Continuous linear interpolation to eliminate discrete gain jumps
-    x_ds = np.arange(len(smooth_ds), dtype=np.float32) * hop + (hop * 0.5)
+    # Interpolate and bound with target_gain to guarantee peak containment without hard clipping
+    x_blocks = np.arange(len(smooth_blocks), dtype=np.float32) * hop + (hop * 0.5)
     x_full = np.arange(n_samples, dtype=np.float32)
-    smooth_gain = np.interp(x_full, x_ds, smooth_ds).astype(np.float32)
+    smooth_gain = np.interp(x_full, x_blocks, smooth_blocks).astype(np.float32)
+    final_gain = np.minimum(smooth_gain, target_gain)
 
-    limited = delayed_audio * smooth_gain
+    # 3-tap smoothing to eliminate slope kinks
+    b_sm = np.array([0.25, 0.5, 0.25], dtype=np.float32)
+    final_gain = signal.convolve(final_gain, b_sm, mode='same').astype(np.float32)
 
-    # Transparent soft-knee limiting: smoothly rounds top 10% without flat-top clipping distortion
-    threshold = ceiling * 0.88
-    over = np.abs(limited) > threshold
-    if np.any(over):
-        sgn = np.sign(limited[over])
-        mag = np.abs(limited[over])
-        # Soft-knee saturation above threshold approaching ceiling asymptotically
-        excess = mag - threshold
-        headroom = ceiling - threshold
-        soft_excess = headroom * np.tanh(excess / max(1e-6, headroom))
-        limited[over] = sgn * (threshold + soft_excess)
+    limited = delayed_audio * final_gain
+
+    # Guard ceiling peak to guarantee zero true clipping
+    max_p = float(np.max(np.abs(limited)))
+    if max_p > ceiling:
+        limited = limited * (ceiling / max_p)
 
     return limited.astype(np.float32)
 
@@ -318,16 +326,20 @@ def master_audio(
     # 3. Bus compressor
     compressed = bus_compressor(audio, threshold_db=-15.0, ratio=2.2, sr=sr)
 
-    # 4. Loudness targeting
+    # 4. Loudness targeting: Clean -14 dBFS standard with natural headroom
     rms = float(np.sqrt(np.mean(compressed ** 2)))
-    target_rms = float(10.0 ** ((target_lufs + 3.0) / 20.0))
+    target_rms = float(10.0 ** (target_lufs / 20.0))
     if rms > 1e-6:
         gain = target_rms / rms
-        gain = np.clip(gain, 0.4, 3.5)
+        gain = np.clip(gain, 0.5, 2.2)
         scaled = compressed * gain
     else:
         scaled = compressed
 
-    # 5. Lookahead Limiter
-    mastered = lookahead_limiter(scaled, ceiling_db=target_peak_db, sr=sr)
+    # 5. Lookahead Limiter (True peak -0.8 dB)
+    mastered = lookahead_limiter(scaled, ceiling_db=min(-0.8, target_peak_db), sr=sr)
+
+    # 6. Safety boundary fade: Ensure audio strictly begins and ends at 0.0 without DAC pops
+    from .segmentation import apply_fade
+    mastered = apply_fade(mastered, fade_samples=int(0.015 * sr))
     return mastered.astype(np.float32)

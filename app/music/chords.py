@@ -58,6 +58,28 @@ PROGRESSIONS_HIPHOP = [
     [1, 4, 5, 4],       # i - iv - v - iv (Mellow boom-bap loop)
 ]
 
+PROGRESSIONS_TRAP = [
+    [1, 6, 7, 6],       # i - VI - VII - VI (Metro Boomin dark anthem)
+    [1, 2, 1, 7],       # i - II - i - VII (Phrygian tension vamp)
+    [1, 6],             # i - VI (Hypnotic dark trap loop)
+    [1, 7],             # i - VII (Heavy 808 drone loop)
+    [1, 4, 6, 5],       # i - iv - VI - V (Dark cinematic turnaround)
+]
+
+PROGRESSIONS_MINIMAL = [
+    [1, 4],             # i - iv (Four Tet deep modal vamp)
+    [1, 5],             # i - v (Hypnotic UK Garage pulse)
+    [1, 7, 4, 5],       # i - VII - iv - v (Dub techno / minimal house groove)
+    [1, 6, 4, 7],       # i - VI - iv - VII (Atmospheric deep house)
+]
+
+PROGRESSIONS_AMBIENT = [
+    [1, 5, 4, 1],       # I - V - IV - I (Brian Eno suspended calm)
+    [1, 7, 6, 7],       # i - VII - VI - VII (Cinematic Hans Zimmer drone arc)
+    [1, 4, 1, 5],       # Suspended non-resolving harmonic cloud
+    [1, 6],             # Vast two-chord ocean
+]
+
 
 @dataclass
 class Chord:
@@ -113,12 +135,18 @@ def select_chord_progression(
     pref = (genre_preference or "").lower()
     is_minor = "minor" in scale.scale_type or scale.scale_type in ["dorian", "phrygian", "blues"]
 
-    if pref in ["pop", "dance", "synthpop"]:
+    if pref in ["trap", "drill"]:
+        degrees = rng.choice(PROGRESSIONS_TRAP)
+    elif pref in ["pop", "dance", "synthpop"]:
         degrees = rng.choice(PROGRESSIONS_POP)
     elif pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
         degrees = rng.choice(PROGRESSIONS_HIPHOP)
-    elif pref in ["rap", "trap", "drill"]:
+    elif pref in ["rap", "electro", "french_touch"]:
         degrees = rng.choice(PROGRESSIONS_RAP)
+    elif pref in ["minimal", "house", "garage"]:
+        degrees = rng.choice(PROGRESSIONS_MINIMAL)
+    elif pref in ["none", "ambient"]:
+        degrees = rng.choice(PROGRESSIONS_AMBIENT)
     elif is_minor:
         degrees = rng.choice(PROGRESSIONS_MINOR)
     else:

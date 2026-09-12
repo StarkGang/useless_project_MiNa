@@ -22,15 +22,13 @@
 
 ## Project Description
 
-**THE UNNECESSARY FM** takes ordinary noises that you hear all around you uhhh and turns it into a song using **pure algorithmic Digital Signal Processing (DSP)**.
+**THE UNNECESSARY FM** turns random noise into music.. you record or upload, ta daa... your music is ready using **pure algorithmic DSP!**
 
 ---
 
 ## The Problem (that doesn't exist)
 
-The world is overflowing with perfectly fine noises like loud honking auto-rickshaws, loud cafeteria chatter, squeaky swivel chairs, kitchen utensils clattering, and people muttering incoherent syllables to themselves while coding. 
-
-Yet shockingly, none of these noises are on Spotify or apple music or any where you would like to hear them. We decided this was unacceptable.
+The world is full of perfectly ordinary noises like loud honking auto-rickshaws, loud cafeteria chatter, squeaky swivel chairs, kitchen utensils clattering, and people muttering, but for some reason, they aren't songs. We decided this was unacceptable.
 
 ---
 

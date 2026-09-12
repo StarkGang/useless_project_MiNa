@@ -145,20 +145,35 @@ def sequence_melody(
 
     # Determine motif length and register based on genre
     motif_len = 4
-    if pref in ["rap", "trap", "drill"]:
-        motif_len = 5  # Daft Punk funky 5-note vocoder / Kanye soul motif
+    if pref in ["trap", "drill"]:
+        motif_len = 6  # Metro Boomin high-register arpeggiated bell sequence
+    elif pref in ["rap", "electro"]:
+        motif_len = 5  # Daft Punk funky 5-note vocoder / French touch motif
     elif pref in ["pop", "dance"]:
-        motif_len = 4  # Lady Gaga / RedOne punchy 4-note earworm hook
+        motif_len = 4  # Lady Gaga / Max Martin punchy 4-note earworm hook
+    elif pref in ["minimal", "garage"]:
+        motif_len = 3  # Four Tet / Jamie xx hypnotic 3-note ostinato
+    elif pref in ["none", "ambient"]:
+        motif_len = 3  # Brian Eno wide evolving drone intervals
 
     motif = generate_motif(scale, motif_length=motif_len, source_spectral_peaks=source_peaks, has_pitch_confidence=has_pitch, rng=rng)
 
     # Octave register adaptation
-    if pref in ["pop", "dance"]:
+    if pref in ["trap", "drill"]:
+        # Dark piercing trap bells sit high in octave 5 & 6 (72 to 92)
+        motif = [min(92, m + 12) if m < 70 else m for m in motif]
+    elif pref in ["pop", "dance"]:
         # Pop leads cut through best in the upper register (octave 5: 68-84)
         motif = [min(84, m + 12) if m < 68 else m for m in motif]
-    elif pref in ["rap", "trap"]:
-        # Daft Punk vocoder / Kanye chops in mid-high register (octaves 4-5: 62-78)
+    elif pref in ["rap", "electro"]:
+        # Daft Punk vocoder / French touch lead in mid-high register (octaves 4-5: 62-78)
         motif = [min(80, m + 12) if m < 60 else m for m in motif]
+    elif pref in ["minimal"]:
+        # Wooden mallets & marimbas in mid-high register (64 to 82)
+        motif = [min(82, m + 12) if m < 62 else m for m in motif]
+    elif pref in ["none", "ambient"]:
+        # Ambient tones in wide open register
+        motif = [m if 55 <= m <= 75 else 60 + (m % 12) for m in motif]
 
     events: List[NoteEvent] = []
 
@@ -185,7 +200,12 @@ def sequence_melody(
         bar_start_time = bar_idx * seconds_per_bar
 
         # Genre-specific rhythmic placement & note lengths
-        if pref in ["rap", "trap", "drill"]:
+        if pref in ["trap", "drill"]:
+            # Metro Boomin staccato bell phrasing (syncopated, snappy, dramatic pauses)
+            step_positions = [0, 2, 3, 5, 6, 7] if len(current_motif) >= 6 else [0, 3, 5, 7]
+            dur_choices = [0.45, 0.65, 0.85]
+            base_vel = 0.92
+        elif pref in ["rap", "electro"]:
             # Kanye x Daft Punk syncopated vocoder riff & soul chop phrasing
             step_positions = [0, 2, 3, 5, 6] if len(current_motif) >= 5 else [0, 2, 4, 6]
             dur_choices = [0.80, 1.0, 1.25]
@@ -200,6 +220,16 @@ def sequence_melody(
             step_positions = [1, 3, 4, 6] if rng.chance(0.5) else [0, 2, 4, 5]
             dur_choices = [1.5, 2.2, 2.8]
             base_vel = 0.82
+        elif pref in ["minimal", "garage"]:
+            # Four Tet hypnotic ostinato
+            step_positions = [0, 3, 5] if len(current_motif) == 3 else [0, 2, 5, 6]
+            dur_choices = [0.6, 0.9, 1.2]
+            base_vel = 0.86
+        elif pref in ["none", "ambient"]:
+            # Brian Eno long sustained drifting harmonics
+            step_positions = [0, 4] if len(current_motif) <= 3 else [0, 3, 6]
+            dur_choices = [3.5, 4.5, 6.0]
+            base_vel = 0.70
         else:
             step_positions = [0, 2, 3, 5] if len(current_motif) == 4 else [0, 2, 4, 6]
             dur_choices = [1.2, 1.8, 2.5]

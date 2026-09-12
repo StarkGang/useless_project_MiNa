@@ -54,7 +54,7 @@ def get_ffmpeg_binary() -> str:
     return "ffmpeg"
 
 
-def decode_to_wav(input_path: str, output_wav_path: str, target_sr: int = TARGET_SR, max_duration: float = 20.0) -> None:
+def decode_to_wav(input_path: str, output_wav_path: str, target_sr: int = TARGET_SR, max_duration: float = 60.0) -> None:
     """Decode any input container (WAV, MP3, WebM, OGG, etc.) to 44.1kHz WAV via FFmpeg."""
     ffmpeg_exe = get_ffmpeg_binary()
     cmd = [
@@ -73,11 +73,11 @@ def decode_to_wav(input_path: str, output_wav_path: str, target_sr: int = TARGET
         raise RuntimeError(f"FFmpeg decoding failed: {err_msg}")
 
 
-def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio:
+def preprocess_audio(path: str, target_sr: int = TARGET_SR, max_duration: float = 60.0) -> PreprocessedAudio:
     """
     Main preprocessing pipeline:
     1. Decode using FFmpeg or soundfile.
-    2. Read strictly up to 20s for maximum speed and minimum RAM.
+    2. Read strictly up to 60s for full-timeline musical composition.
     3. Resample to 44.1 kHz.
     4. Convert to mono for analysis.
     5. Preserve stereo source when available.
@@ -89,7 +89,7 @@ def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio
     if not path_obj.exists():
         raise FileNotFoundError(f"Source file not found: {path}")
 
-    max_allowed_samples = int(20 * target_sr)
+    max_allowed_samples = int(max_duration * target_sr)
 
     # Fast path: Try direct reading via soundfile if already a clean WAV at target_sr
     data = None
@@ -107,7 +107,7 @@ def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio
             temp_wav_path = tmp.name
 
         try:
-            decode_to_wav(str(path_obj), temp_wav_path, target_sr=target_sr, max_duration=20.0)
+            decode_to_wav(str(path_obj), temp_wav_path, target_sr=target_sr, max_duration=max_duration)
             data, sr = sf.read(temp_wav_path, frames=max_allowed_samples, dtype="float32", always_2d=True)
         finally:
             if os.path.exists(temp_wav_path):

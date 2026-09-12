@@ -79,20 +79,35 @@ def select_scale(
     for st in scale_types:
         w = 1.0
 
-        if pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
+        if pref in ["trap", "drill"]:
+            if st in ["phrygian", "harmonic_minor"]:
+                w += 6.0
+            elif st in ["minor", "pentatonic_minor"]:
+                w += 3.5
+            elif st in ["blues"]:
+                w += 1.0
+        elif pref in ["hiphop", "hip_hop", "boom_bap", "lofi"]:
             if st in ["dorian", "pentatonic_minor"]:
-                w += 4.0
+                w += 4.5
             elif st in ["minor", "blues"]:
                 w += 3.0
             elif st in ["mixolydian"]:
                 w += 1.5
-        elif pref in ["rap", "trap", "drill"]:
-            if st in ["harmonic_minor", "phrygian"]:
+        elif pref in ["rap", "electro", "french_touch"]:
+            if st in ["dorian", "minor", "pentatonic_minor"]:
+                w += 4.0
+            elif st in ["blues", "mixolydian"]:
+                w += 2.0
+        elif pref in ["minimal", "house", "garage"]:
+            if st in ["dorian", "pentatonic_minor"]:
                 w += 5.0
-            elif st in ["minor", "pentatonic_minor"]:
+            elif st in ["minor"]:
+                w += 3.0
+        elif pref in ["none", "ambient"]:
+            if st in ["lydian", "pentatonic_major"]:
+                w += 5.0
+            elif st in ["dorian", "mixolydian"]:
                 w += 3.5
-            elif st in ["blues"]:
-                w += 1.5
         elif pref in ["pop", "dance", "synthpop"]:
             if st in ["major", "pentatonic_major"]:
                 w += 4.5
@@ -132,10 +147,16 @@ def select_scale(
             root_idx = 0
     else:
         # Common pleasant musical roots matched to genre
-        if pref in ["rap", "trap", "drill"]:
-            popular_roots = ["C#", "D", "D#", "F", "F#", "G#", "A"]
+        if pref in ["trap", "drill"]:
+            popular_roots = ["C#", "D", "D#", "F", "F#"]  # Ideal fundamental ranges for chest-shaking 808s
+        elif pref in ["rap", "electro"]:
+            popular_roots = ["C#", "D", "E", "F#", "A"]
         elif pref in ["hiphop", "hip_hop", "lofi"]:
             popular_roots = ["C", "D", "E", "F", "G", "A", "A#"]
+        elif pref in ["minimal", "house"]:
+            popular_roots = ["C", "D", "F", "G", "A"]
+        elif pref in ["none", "ambient"]:
+            popular_roots = ["D", "E", "F", "G", "A", "C"]
         elif pref in ["pop"]:
             popular_roots = ["C", "D", "E", "F", "G", "A"]
         else:

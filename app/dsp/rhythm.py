@@ -41,7 +41,7 @@ def analyze_rhythm(audio: np.ndarray, sr: int = 44100) -> RhythmFeatures:
     # 1. Spectral flux onset envelope (pure NumPy, zero Numba JIT compiling)
     hop_length = 512
     n_fft = 1024
-    analysis_audio = audio[:min(len(audio), sr * 8)]
+    analysis_audio = audio[:min(len(audio), sr * 60)]
     if len(analysis_audio) < n_fft:
         analysis_audio = np.pad(analysis_audio, (0, n_fft - len(analysis_audio)))
 
