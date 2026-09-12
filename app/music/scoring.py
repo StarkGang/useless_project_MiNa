@@ -11,7 +11,6 @@ TheUnnecessaryFM Section 19 Requirements:
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-import librosa
 import numpy as np
 
 
@@ -86,11 +85,27 @@ def score_composition(
     dyn_fitness = 1.0 - abs(crest - 4.5) * 0.20
     dynamic_range_score = round(float(np.clip(dyn_fitness, 0.25, 1.0)) * 20.0, 1)
 
-    # 5. Musical Repetition vs Variety Score (autocorrelation of energy envelope)
+    # Musical Repetition vs Variety Score — pure numpy FFT autocorrelation of energy envelope
     hop = 2048
-    rms_env = librosa.feature.rms(y=out_mono, hop_length=hop)[0]
+    frame_len = 2048
+    padded = np.pad(out_mono, frame_len // 2, mode="constant")
+    num_frames = (len(padded) - frame_len) // hop + 1
+    if num_frames > 0:
+        shape = (num_frames, frame_len)
+        strides = (padded.strides[0] * hop, padded.strides[0])
+        frames = np.lib.stride_tricks.as_strided(padded, shape=shape, strides=strides)
+        rms_env = np.sqrt(np.mean(frames ** 2, axis=1))
+    else:
+        rms_env = np.array([np.sqrt(np.mean(out_mono ** 2))])
+
     if len(rms_env) > 10:
-        ac = librosa.autocorrelate(rms_env, max_size=min(len(rms_env), int(sr / hop * 6)))
+        max_size = min(len(rms_env), int(sr / hop * 6))
+        # FFT-based autocorrelation: pure numpy
+        n = len(rms_env)
+        n_fft2 = 2 ** int(np.ceil(np.log2(2 * n - 1)))
+        fx = np.fft.rfft(rms_env.astype(np.float64), n=n_fft2)
+        ac_full = np.fft.irfft(fx * np.conj(fx))[:n]
+        ac = ac_full[:max_size]
         if len(ac) > 2:
             ac_norm = ac[1:] / (ac[0] + 1e-6)
             peak_periodicity = float(np.max(ac_norm))

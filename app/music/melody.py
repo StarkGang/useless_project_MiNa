@@ -141,24 +141,24 @@ def sequence_melody(
 
     import numpy as np
 
-    pref = (genre_preference or "").lower()
+    pref = (genre_preference or "pop").lower()
 
     # Determine motif length and register based on genre
     motif_len = 4
     if pref in ["rap", "trap", "drill"]:
-        motif_len = 5  # Hypnotic 5-note trap motif
-    elif pref in ["pop"]:
-        motif_len = 4  # Punchy 4-note earworm
+        motif_len = 5  # Daft Punk funky 5-note vocoder / Kanye soul motif
+    elif pref in ["pop", "dance"]:
+        motif_len = 4  # Lady Gaga / RedOne punchy 4-note earworm hook
 
     motif = generate_motif(scale, motif_length=motif_len, source_spectral_peaks=source_peaks, has_pitch_confidence=has_pitch, rng=rng)
 
     # Octave register adaptation
-    if pref in ["pop"]:
-        # Pop leads cut through best in the upper register (octave 5)
+    if pref in ["pop", "dance"]:
+        # Pop leads cut through best in the upper register (octave 5: 68-84)
         motif = [min(84, m + 12) if m < 68 else m for m in motif]
     elif pref in ["rap", "trap"]:
-        # Trap bells / dark plucks in mid-high register
-        motif = [min(81, m + 12) if m < 64 else m for m in motif]
+        # Daft Punk vocoder / Kanye chops in mid-high register (octaves 4-5: 62-78)
+        motif = [min(80, m + 12) if m < 60 else m for m in motif]
 
     events: List[NoteEvent] = []
 
@@ -186,17 +186,17 @@ def sequence_melody(
 
         # Genre-specific rhythmic placement & note lengths
         if pref in ["rap", "trap", "drill"]:
-            # Staccato, syncopated trap bell / pluck rhythm
-            step_positions = [0, 1, 3, 4, 6] if len(current_motif) >= 5 else [0, 2, 3, 5]
-            dur_choices = [0.65, 0.85, 1.1]  # Tight staccato
-            base_vel = 0.88
-        elif pref in ["pop"]:
-            # Driving, rhythmic pop hook
-            step_positions = [0, 2, 3, 5] if len(current_motif) == 4 else [0, 1, 4, 6]
-            dur_choices = [1.2, 1.6, 2.0]
-            base_vel = 0.92
+            # Kanye x Daft Punk syncopated vocoder riff & soul chop phrasing
+            step_positions = [0, 2, 3, 5, 6] if len(current_motif) >= 5 else [0, 2, 4, 6]
+            dur_choices = [0.80, 1.0, 1.25]
+            base_vel = 0.94
+        elif pref in ["pop", "dance"]:
+            # Lady Gaga anthemic earworm hook (driving 8th-note pocket)
+            step_positions = [0, 2, 4, 6] if len(current_motif) == 4 else [0, 2, 3, 5]
+            dur_choices = [1.1, 1.4, 1.8]
+            base_vel = 0.95
         elif pref in ["hiphop", "hip_hop", "lofi"]:
-            # Swung, laid-back soulful phrasing
+            # J Dilla / Nujabes swung laid-back soulful phrasing
             step_positions = [1, 3, 4, 6] if rng.chance(0.5) else [0, 2, 4, 5]
             dur_choices = [1.5, 2.2, 2.8]
             base_vel = 0.82

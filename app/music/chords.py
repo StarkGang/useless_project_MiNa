@@ -33,28 +33,29 @@ PROGRESSIONS_MINOR = [
 ]
 
 
-# Genre-specific progression degree patterns
+# Genre-specific progression degree patterns tailored to iconic artist archetypes
 PROGRESSIONS_POP = [
-    [1, 5, 6, 4],       # I - V - vi - IV (Iconic 4-chord pop loop)
-    [6, 4, 1, 5],       # vi - IV - I - V (Emotive modern radio pop)
-    [1, 4, 6, 5],       # I - IV - vi - V (Driving synth-pop)
-    [1, 6, 4, 5],       # I - vi - IV - V (Classic pop hook)
-]
-
-PROGRESSIONS_HIPHOP = [
-    [1, 6, 3, 7],       # i - VI - III - VII (Classic 90s/lofi hip hop)
-    [2, 5, 1],          # ii - V - I (Soulful jazz turnaround)
-    [1, 4, 7],          # i - iv - VII (Head-nodding groove)
-    [1, 7],             # i - VII (2-chord soul loop)
-    [1, 4, 5],          # i - iv - v
+    [6, 4, 1, 5],       # vi - IV - I - V (Lady Gaga "Poker Face", Nelly Furtado "Say It Right" anthem)
+    [1, 5, 6, 4],       # I - V - vi - IV (Lady Gaga "Bad Romance" / RedOne iconic 4-chord progression)
+    [1, 4, 6, 5],       # I - IV - vi - V (Driving synth-pop club progression)
+    [6, 5, 4, 5],       # vi - V - IV - V (Nelly Furtado "Promiscuous" dramatic pop loop)
+    [1, 6, 4, 5],       # I - vi - IV - V (Classic dance-pop hook)
 ]
 
 PROGRESSIONS_RAP = [
-    [1, 6],             # i - VI (Dark menacing 2-chord trap loop)
-    [1, 7, 6],          # i - VII - VI (Heavy minor descent)
-    [1, 2],             # i - II (Phrygian trap tension)
-    [1, 6, 7],          # i - VI - VII (Drill/trap hook)
-    [1, 7],             # i - VII (Ominous trap loop)
+    [1, 7, 6, 7],       # i - VII - VI - VII (French touch anthem)
+    [1, 4, 1, 7],       # i - iv - i - VII (Funky disco vamp)
+    [1, 6, 3, 7],       # i - VI - III - VII (Soulful hip hop progression)
+    [1, 7],             # i - VII (Hypnotic 2-chord funk groove)
+    [1, 6],             # i - VI (Driving minor tension)
+]
+
+PROGRESSIONS_HIPHOP = [
+    [1, 6, 2, 5],       # i - VI - ii - V (Classic soulful jazz boom-bap)
+    [1, 4, 2, 5],       # i - iv - ii - V (Lo-fi hip hop turnaround)
+    [1, 7, 6, 5],       # i - VII - VI - V (Moody Andalusian cadence)
+    [2, 5, 1, 6],       # ii - V - I - vi (Jazz hop classic)
+    [1, 4, 5, 4],       # i - iv - v - iv (Mellow boom-bap loop)
 ]
 
 
