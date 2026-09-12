@@ -37,7 +37,7 @@ For Software:
 ```pip install -r requirements.txt```
 
 # Run
-py -m uvicorn app.main:app --port 8080
+```py -m uvicorn app.main:app --port 8080```
 
 ### Project Documentation
 For Software:
@@ -53,8 +53,10 @@ For Software:
 *Add caption explaining what this shows*
 
 # Diagrams
-![Workflow](Add your workflow/architecture diagram here)
-*Add caption explaining your workflow*
+![Workflow Architecture](images/po.png)
+The workflow starts when the user uploads a sound or noise through the frontend. The audio is first processed and normalized, then its main characteristics such as **frequency, rhythm, pitch, and texture** are extracted. The sound is divided into smaller parts like **impacts, pulses, movements, and background sounds**, which are then used by a procedural music engine to create different musical layers. The system generates **three possible versions**, processes and scores them, and selects the best one. Finally, the generated music is shown in an interactive player along with its waveform and audio characteristics.
+
+
 
 ### Project Demo
 # Video
@@ -64,10 +66,6 @@ For Software:
 # Additional Demos
 [Add any extra demo materials/links]
 
-## Team Contributions
-- [Name 1]: [Specific contributions]
-- [Name 2]: [Specific contributions]
-- [Name 3]: [Specific contributions]
 
 ---
 Made with ❤️ at TinkerHub Useless Projects 
