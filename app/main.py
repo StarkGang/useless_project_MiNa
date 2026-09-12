@@ -63,6 +63,31 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def enforce_file_size_limit_header(request: Request, call_next):
+    """Early rejection if Content-Length header exceeds the configured file size limit."""
+    if request.method == "POST":
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                from .api.routes import get_file_size_limit_bytes
+                max_bytes = get_file_size_limit_bytes()
+                # Content-Length in multipart/form-data includes form boundaries, field names, and headers (~64KB margin)
+                if int(content_length) > (max_bytes + 65536):
+                    import json
+                    limit_mb = max_bytes / (1024 * 1024)
+                    return Response(
+                        content=json.dumps({
+                            "detail": f"Request payload size exceeds the allowed limit of {limit_mb:.1f}MB."
+                        }),
+                        status_code=413,
+                        media_type="application/json"
+                    )
+            except Exception:
+                pass
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def normalize_vercel_path(request: Request, call_next):
     """Normalize paths rewritten by Vercel serverless functions."""
     # 1. Query parameter __path__ from Vercel rewrite

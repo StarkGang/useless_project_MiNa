@@ -3,6 +3,7 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
+    FILE_SIZE_LIMIT="15MB" \
     # Cap memory fragmentation on Linux container glibc
     MALLOC_ARENA_MAX=2 \
     # Cap OpenBLAS/OpenMP threads to 1 — prevents thread-thrashing on single-core free-tier CPUs

@@ -27,10 +27,104 @@ from .jobs import OUTPUT_DIR, UPLOAD_DIR, job_manager, submit_generation_job
 router = APIRouter()
 
 
+def get_file_size_limit_bytes() -> int:
+    """
+    Parse FILE_SIZE_LIMIT from environment (e.g. '5MB', '15MB', '5242880', '15').
+    Defaults to 15MB (15 * 1024 * 1024 bytes).
+    """
+    raw = os.environ.get("FILE_SIZE_LIMIT", "15MB").strip().upper()
+    try:
+        if raw.endswith("MB"):
+            return int(float(raw[:-2].strip()) * 1024 * 1024)
+        if raw.endswith("M"):
+            return int(float(raw[:-1].strip()) * 1024 * 1024)
+        if raw.endswith("KB"):
+            return int(float(raw[:-2].strip()) * 1024)
+        if raw.endswith("K"):
+            return int(float(raw[:-1].strip()) * 1024)
+        if raw.endswith("B"):
+            return int(float(raw[:-1].strip()))
+        val = float(raw)
+        if val < 1024:
+            return int(val * 1024 * 1024)
+        return int(val)
+    except Exception:
+        return 15 * 1024 * 1024
+
+
+async def save_uploaded_file_with_limit(upload_file: UploadFile, target_path: Path, max_bytes: int):
+    """
+    Saves an UploadFile to target_path while strictly enforcing max_bytes limit.
+    Checks file.size upfront if known and streams in 64KB chunks, aborting immediately
+    and cleaning up the file if the stream exceeds max_bytes.
+    """
+    limit_mb = max_bytes / (1024 * 1024)
+
+    # 1. Fast check if size is already provided by ASGI/Starlette
+    if getattr(upload_file, "size", None) is not None and upload_file.size > max_bytes:
+        uploaded_mb = upload_file.size / (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size ({uploaded_mb:.2f}MB) exceeds the allowed limit of {limit_mb:.1f}MB."
+        )
+
+    # 2. Chunked streaming write with hard byte limit to protect server memory & disk
+    chunk_size = 64 * 1024  # 64 KB
+    total_written = 0
+
+    try:
+        with open(target_path, "wb") as buffer:
+            while True:
+                chunk = await upload_file.read(chunk_size)
+                if not chunk:
+                    break
+                total_written += len(chunk)
+                if total_written > max_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File size exceeds the allowed limit of {limit_mb:.1f}MB."
+                    )
+                buffer.write(chunk)
+    except HTTPException:
+        if target_path.exists():
+            try:
+                os.remove(target_path)
+            except OSError:
+                pass
+        raise
+    except Exception as e:
+        if target_path.exists():
+            try:
+                os.remove(target_path)
+            except OSError:
+                pass
+        raise HTTPException(status_code=400, detail=f"Failed to save uploaded file: {str(e)}")
+
+
 @router.get("/health")
 def api_health():
     """Ultra-fast JSON health check endpoint for uptime pingers & monitors."""
-    return {"status": "ok", "service": "TheUnnecessaryFM"}
+    limit_bytes = get_file_size_limit_bytes()
+    limit_mb = round(limit_bytes / (1024 * 1024), 1)
+    limit_mb_val = int(limit_mb) if limit_mb.is_integer() else limit_mb
+    return {
+        "status": "ok",
+        "service": "TheUnnecessaryFM",
+        "file_size_limit_mb": limit_mb_val
+    }
+
+
+@router.get("/config")
+def api_config():
+    """Returns runtime client configuration including dynamic upload limits."""
+    limit_bytes = get_file_size_limit_bytes()
+    limit_mb = round(limit_bytes / (1024 * 1024), 1)
+    limit_mb_val = int(limit_mb) if limit_mb.is_integer() else limit_mb
+    return {
+        "file_size_limit_bytes": limit_bytes,
+        "file_size_limit_mb": limit_mb_val,
+        "service": "TheUnnecessaryFM"
+    }
 
 
 @router.post("/analyze")
@@ -44,8 +138,8 @@ async def analyze_uploaded_audio(file: UploadFile = File(...)):
     temp_path = UPLOAD_DIR / temp_filename
 
     try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        max_bytes = get_file_size_limit_bytes()
+        await save_uploaded_file_with_limit(file, temp_path, max_bytes)
 
         # Preprocess and analyze
         prep = preprocess_audio(str(temp_path))
@@ -111,13 +205,13 @@ async def generate_music(
             custom_seed_val = None
 
     if file is not None and file.filename:
-        # Save file to uploads directory
+        # Save file to uploads directory with strict size limit enforcement
         suffix = Path(file.filename).suffix or ".wav"
         save_filename = f"upload_{uuid.uuid4().hex[:10]}{suffix}"
         target_path = UPLOAD_DIR / save_filename
 
-        with open(target_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        max_bytes = get_file_size_limit_bytes()
+        await save_uploaded_file_with_limit(file, target_path, max_bytes)
     elif existing_job_id:
         # Check if previous job's source file exists
         source_clean = UPLOAD_DIR / f"{existing_job_id}_clean.wav"

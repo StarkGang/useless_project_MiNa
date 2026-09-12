@@ -370,7 +370,46 @@
     });
   }
 
+  // Dynamic server upload limit (defaults to 15MB, synced via /api/config)
+  let maxFileSizeBytes = 15 * 1024 * 1024;
+  let maxFileSizeMB = 15;
+
+  async function syncServerConfig() {
+    try {
+      const res = await fetch(buildUrl('/api/config'));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.file_size_limit_bytes) {
+          maxFileSizeBytes = Number(data.file_size_limit_bytes);
+          maxFileSizeMB = data.file_size_limit_mb || Math.round(maxFileSizeBytes / (1024 * 1024));
+          updateUploadLimitUI();
+        }
+      }
+    } catch (e) {
+      // Keep resilient 15MB default
+    }
+  }
+
+  function updateUploadLimitUI() {
+    const hintEl = document.getElementById('uploadLimitHint');
+    if (hintEl) {
+      hintEl.textContent = `${maxFileSizeMB}MB`;
+    }
+  }
+
+  // Fetch server configuration on startup
+  syncServerConfig();
+
   function handleFileSelected(file) {
+    if (!file) return;
+
+    if (file.size > maxFileSizeBytes) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      showToast(`File size (${sizeMB} MB) exceeds the ${maxFileSizeMB} MB limit. Please select a smaller audio clip.`, 'error', 'FILE TOO LARGE');
+      resetFileInput();
+      return;
+    }
+
     currentFile = file;
     if (selectedFileName) {
       selectedFileName.textContent = file.name;
@@ -691,6 +730,12 @@
 
   async function submitMusicGeneration() {
     if (!currentFile && !currentJobId) return;
+
+    if (currentFile && currentFile.size > maxFileSizeBytes) {
+      const sizeMB = (currentFile.size / (1024 * 1024)).toFixed(1);
+      showToast(`File size (${sizeMB} MB) exceeds the ${maxFileSizeMB} MB limit. Please select a smaller audio clip.`, 'error', 'FILE TOO LARGE');
+      return;
+    }
 
     showProcessingState("Initializing DSP pipeline & decoding acoustic timbre...");
 

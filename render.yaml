@@ -13,6 +13,8 @@ services:
         value: "1"
       - key: RENDER
         value: "1"
+      - key: FILE_SIZE_LIMIT
+        value: "5MB"
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: MALLOC_ARENA_MAX

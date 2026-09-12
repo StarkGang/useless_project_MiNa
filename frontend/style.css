@@ -2786,21 +2786,24 @@ body {
 }
 
 .wf-tag {
-  font-size: 0.68rem;
-  font-weight: 800;
-  padding: 3px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 9px;
   border-radius: var(--radius-pill);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
 }
 
 .tag-src {
-  background-color: rgba(34, 211, 238, 0.15);
-  color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.08);
+  color: rgba(147, 216, 248, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.22);
 }
 
 .tag-res {
-  background-color: rgba(30, 215, 96, 0.15);
-  color: var(--spotify-green);
+  background: rgba(30, 215, 96, 0.08);
+  color: rgba(134, 229, 169, 0.9);
+  border: 1px solid rgba(30, 215, 96, 0.22);
 }
 
 .wf-name {
@@ -4167,18 +4170,18 @@ body {
   letter-spacing: 0.8px;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
-  background: rgba(30, 215, 96, 0.12);
-  color: var(--spotify-green);
-  border: 1px solid rgba(30, 215, 96, 0.3);
+  background: rgba(30, 215, 96, 0.08);
+  color: rgba(134, 229, 169, 0.9);
+  border: 1px solid rgba(30, 215, 96, 0.22);
 }
 
 .ab-badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--spotify-green);
-  box-shadow: 0 0 8px var(--spotify-green);
-  animation: ab-dot-pulse 2s infinite ease-in-out;
+  background: #4ade80;
+  opacity: 0.85;
+  animation: ab-dot-pulse 2.5s infinite ease-in-out;
 }
 
 @keyframes ab-dot-pulse {
@@ -4224,45 +4227,47 @@ body {
   gap: 12px;
   padding: 10px 18px;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(30, 215, 96, 0.4);
-  background: rgba(30, 215, 96, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-white);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .btn-ab-switch:hover {
   transform: translateY(-1px);
-  background: rgba(30, 215, 96, 0.22);
-  box-shadow: 0 6px 18px rgba(30, 215, 96, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07) inset, 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 .btn-ab-switch.playing-source {
-  border-color: rgba(56, 189, 248, 0.6);
-  background: rgba(56, 189, 248, 0.14);
-  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.08);
+  box-shadow: 0 1px 0 rgba(56, 189, 248, 0.1) inset, 0 3px 12px rgba(0, 0, 0, 0.4);
 }
 
 .btn-ab-switch.playing-source .ab-switch-indicator {
-  color: #38bdf8;
+  color: #93d8f8;
 }
 
 .btn-ab-switch.playing-source .ab-switch-icon {
-  color: #38bdf8;
+  color: #93d8f8;
 }
 
 .btn-ab-switch.playing-result {
-  border-color: rgba(30, 215, 96, 0.6);
-  background: rgba(30, 215, 96, 0.14);
-  box-shadow: 0 4px 16px rgba(30, 215, 96, 0.2);
+  border-color: rgba(30, 215, 96, 0.35);
+  background: rgba(30, 215, 96, 0.08);
+  box-shadow: 0 1px 0 rgba(30, 215, 96, 0.1) inset, 0 3px 12px rgba(0, 0, 0, 0.4);
 }
 
 .btn-ab-switch.playing-result .ab-switch-indicator {
-  color: var(--spotify-green);
+  color: #86e5a9;
 }
 
 .btn-ab-switch.playing-result .ab-switch-icon {
-  color: var(--spotify-green);
+  color: #86e5a9;
 }
 
 .ab-switch-icon {
@@ -4333,35 +4338,40 @@ body {
 }
 
 .ab-channel-btn.btn-channel-a.active {
-  background: rgba(56, 189, 248, 0.18);
-  border-color: #38bdf8;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.32);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
 .ab-channel-btn.btn-channel-b.active {
-  background: rgba(30, 215, 96, 0.18);
-  border-color: var(--spotify-green);
-  box-shadow: 0 0 14px rgba(30, 215, 96, 0.35);
+  background: rgba(30, 215, 96, 0.1);
+  border-color: rgba(30, 215, 96, 0.32);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
+/* Premium channel badges — no neon, tight typographic label */
 .ch-badge {
-  font-size: 0.68rem;
-  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.60rem;
+  font-weight: 700;
   padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  letter-spacing: 0.5px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .ch-badge.ch-a {
-  background: rgba(56, 189, 248, 0.25);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.1);
+  color: rgba(147, 216, 248, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
 .ch-badge.ch-b {
-  background: rgba(30, 215, 96, 0.25);
-  color: var(--spotify-green);
-  border: 1px solid rgba(30, 215, 96, 0.4);
+  background: rgba(30, 215, 96, 0.1);
+  color: rgba(134, 229, 169, 0.85);
+  border: 1px solid rgba(30, 215, 96, 0.2);
 }
 
 .ch-label {
@@ -4451,27 +4461,28 @@ body {
 .ab-balance-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 3px solid #1ed760;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 10px rgba(30, 215, 96, 0.6);
+  background: #e2e8f0;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
   cursor: grab;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .ab-balance-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 }
 
 .ab-balance-slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 3px solid #1ed760;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 10px rgba(30, 215, 96, 0.6);
+  background: #e2e8f0;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
   cursor: grab;
 }
 
@@ -4558,10 +4569,10 @@ body {
 }
 
 .btn-speed-badge:hover {
-  background: rgba(30, 215, 96, 0.18);
-  color: var(--spotify-green);
-  border-color: var(--spotify-green);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.14);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.04);
 }
 
 .player-speed-badge {
