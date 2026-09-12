@@ -54,12 +54,13 @@ def get_ffmpeg_binary() -> str:
     return "ffmpeg"
 
 
-def decode_to_wav(input_path: str, output_wav_path: str, target_sr: int = TARGET_SR) -> None:
+def decode_to_wav(input_path: str, output_wav_path: str, target_sr: int = TARGET_SR, max_duration: float = 20.0) -> None:
     """Decode any input container (WAV, MP3, WebM, OGG, etc.) to 44.1kHz WAV via FFmpeg."""
     ffmpeg_exe = get_ffmpeg_binary()
     cmd = [
         ffmpeg_exe,
         "-y",
+        "-t", str(max_duration),
         "-i", str(input_path),
         "-vn",
         "-ar", str(target_sr),
@@ -75,25 +76,25 @@ def decode_to_wav(input_path: str, output_wav_path: str, target_sr: int = TARGET
 def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio:
     """
     Main preprocessing pipeline:
-    1. Decode using FFmpeg.
-    2. Convert to WAV.
+    1. Decode using FFmpeg or soundfile.
+    2. Read strictly up to 20s for maximum speed and minimum RAM.
     3. Resample to 44.1 kHz.
     4. Convert to mono for analysis.
     5. Preserve stereo source when available.
     6. Normalize safely.
     7. Remove DC offset.
-    8. Detect silence.
-    9. Detect clipping.
-    10. Calculate source duration.
+    8. Detect silence and clipping.
     """
     path_obj = Path(path)
     if not path_obj.exists():
         raise FileNotFoundError(f"Source file not found: {path}")
 
+    max_allowed_samples = int(20 * target_sr)
+
     # Fast path: Try direct reading via soundfile if already a clean WAV at target_sr
     data = None
     try:
-        raw_data, file_sr = sf.read(str(path_obj), dtype="float32", always_2d=True)
+        raw_data, file_sr = sf.read(str(path_obj), frames=max_allowed_samples, dtype="float32", always_2d=True)
         if file_sr == target_sr and raw_data.shape[0] > 0:
             data = raw_data
             sr = file_sr
@@ -106,8 +107,8 @@ def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio
             temp_wav_path = tmp.name
 
         try:
-            decode_to_wav(str(path_obj), temp_wav_path, target_sr=target_sr)
-            data, sr = sf.read(temp_wav_path, dtype="float32", always_2d=True)
+            decode_to_wav(str(path_obj), temp_wav_path, target_sr=target_sr, max_duration=20.0)
+            data, sr = sf.read(temp_wav_path, frames=max_allowed_samples, dtype="float32", always_2d=True)
         finally:
             if os.path.exists(temp_wav_path):
                 try:
@@ -115,8 +116,6 @@ def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio
                 except OSError:
                     pass
 
-    # Cap maximum duration to 30s to prevent OOM on 512MB RAM containers
-    max_allowed_samples = int(30 * target_sr)
     if data.shape[0] > max_allowed_samples:
         data = data[:max_allowed_samples]
 

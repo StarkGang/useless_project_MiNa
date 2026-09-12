@@ -1,11 +1,11 @@
 """
-Spectral Analysis DSP Module
-Calculates FFT, spectral centroid, bandwidth, rolloff, contrast, flatness, and band energies.
+Spectral Analysis DSP Module (Pure NumPy/SciPy Optimization)
+Calculates FFT, spectral centroid, bandwidth, rolloff, contrast, flatness, and band energies
+with zero Numba JIT overhead and minimal memory allocation.
 """
 
 from dataclasses import dataclass
-from typing import List, Tuple
-import librosa
+from typing import List
 import numpy as np
 
 
@@ -24,7 +24,7 @@ class SpectralFeatures:
 
 
 def analyze_spectrum(audio: np.ndarray, sr: int = 44100) -> SpectralFeatures:
-    """Extract spectral features from mono audio array using DSP."""
+    """Extract spectral features from mono audio array using pure vectorized NumPy."""
     if len(audio) == 0:
         return SpectralFeatures(
             spectral_centroid=1000.0,
@@ -39,51 +39,75 @@ def analyze_spectrum(audio: np.ndarray, sr: int = 44100) -> SpectralFeatures:
             brightness=0.5
         )
 
-    # Precompute shared magnitude spectrogram (capped to 10s to prevent out-of-memory on 512MB RAM hosts)
-    analysis_audio = audio[:min(len(audio), sr * 10)]
-    n_fft = min(2048, max(256, 2 ** int(np.floor(np.log2(len(analysis_audio))))))
-    hop_length = 512
-    S = np.abs(librosa.stft(analysis_audio, n_fft=n_fft, hop_length=hop_length))
+    # Frame-based STFT via sliding window (capped to 4s for low memory and instant execution)
+    analysis_audio = audio[:min(len(audio), sr * 4)]
+    frame_len = min(2048, max(256, 2 ** int(np.floor(np.log2(len(analysis_audio))))))
+    hop_len = max(256, frame_len // 2)
+
+    n_frames = max(1, (len(analysis_audio) - frame_len) // hop_len + 1)
+    frames = np.lib.stride_tricks.as_strided(
+        analysis_audio,
+        shape=(n_frames, frame_len),
+        strides=(analysis_audio.strides[0] * hop_len, analysis_audio.strides[0])
+    )
+    win = np.hanning(frame_len).astype(np.float32)
+    spec = np.abs(np.fft.rfft(frames * win, axis=-1))
+    freqs = np.fft.rfftfreq(frame_len, 1.0 / sr)
 
     # 1. Spectral Centroid
-    centroids = librosa.feature.spectral_centroid(S=S, sr=sr)
+    spec_sum = np.sum(spec, axis=-1, keepdims=True) + 1e-12
+    centroids = np.sum(spec * freqs, axis=-1, keepdims=True) / spec_sum
     mean_centroid = float(np.mean(centroids))
 
     # 2. Spectral Bandwidth
-    bandwidths = librosa.feature.spectral_bandwidth(S=S, sr=sr)
+    bandwidths = np.sqrt(np.sum(spec * ((freqs - centroids) ** 2), axis=-1, keepdims=True) / spec_sum)
     mean_bandwidth = float(np.mean(bandwidths))
 
     # 3. Spectral Rolloff (85% energy)
-    rolloffs = librosa.feature.spectral_rolloff(S=S, sr=sr, roll_percent=0.85)
-    mean_rolloff = float(np.mean(rolloffs))
+    cum_energy = np.cumsum(spec ** 2, axis=-1)
+    threshold = 0.85 * cum_energy[:, -1:]
+    rolloff_bins = np.argmax(cum_energy >= threshold, axis=-1)
+    mean_rolloff = float(np.mean(freqs[rolloff_bins]))
 
-    # 4. Spectral Flatness (Wiener entropy)
-    flatness = librosa.feature.spectral_flatness(S=S)
-    mean_flatness = float(np.mean(flatness))
+    # 4. Spectral Flatness (Wiener entropy: geometric mean / arithmetic mean)
+    power = spec ** 2 + 1e-12
+    geom_mean = np.exp(np.mean(np.log(power), axis=-1))
+    arith_mean = np.mean(power, axis=-1)
+    mean_flatness = float(np.clip(np.mean(geom_mean / (arith_mean + 1e-12)), 0.0, 1.0))
 
     # 5. Spectral Contrast across sub-bands
-    contrast = librosa.feature.spectral_contrast(S=S, sr=sr, n_bands=6)
-    mean_contrast = [float(v) for v in np.mean(contrast, axis=1)]
+    # Octave bands: 0-200, 200-400, 400-800, 800-1600, 1600-3200, 3200-min(sr//2, 16000)
+    band_edges = [0, 200, 400, 800, 1600, 3200, min(sr // 2, 16000)]
+    contrast_vals = []
+    mean_spec = np.mean(spec, axis=0)  # average across frames
+    for b_idx in range(len(band_edges) - 1):
+        low_f, high_f = band_edges[b_idx], band_edges[b_idx + 1]
+        mask = (freqs >= low_f) & (freqs < high_f)
+        if np.any(mask):
+            b_power = mean_spec[mask]
+            peak_val = np.percentile(b_power, 85) + 1e-6
+            valley_val = np.percentile(b_power, 15) + 1e-6
+            contrast_db = float(20.0 * np.log10(peak_val / valley_val))
+            contrast_vals.append(round(contrast_db, 2))
+        else:
+            contrast_vals.append(10.0)
 
     # 6. Global FFT & Dominant Frequencies
-    # Limit FFT length for performance if audio is long
-    max_fft_len = min(len(audio), sr * 10)
+    max_fft_len = min(len(audio), 4096)
     audio_slice = audio[:max_fft_len]
     fft_vals = np.abs(np.fft.rfft(audio_slice * np.hanning(len(audio_slice))))
-    freqs = np.fft.rfftfreq(len(audio_slice), 1.0 / sr)
+    g_freqs = np.fft.rfftfreq(len(audio_slice), 1.0 / sr)
 
     # Find top 5 dominant peaks in 40Hz - 8000Hz
-    valid_idx = np.where((freqs >= 40) & (freqs <= 8000))[0]
+    valid_idx = np.where((g_freqs >= 40) & (g_freqs <= 8000))[0]
     if len(valid_idx) > 0:
         valid_fft = fft_vals[valid_idx]
-        valid_freqs = freqs[valid_idx]
+        valid_freqs = g_freqs[valid_idx]
 
-        # Simple peak picking by sorting amplitude
         top_indices = np.argsort(valid_fft)[::-1]
         dominant: List[float] = []
         for idx in top_indices:
             f = float(valid_freqs[idx])
-            # Ensure peaks are separated by at least half an octave
             if all(abs(f - existing) > 0.05 * f for existing in dominant):
                 dominant.append(round(f, 1))
             if len(dominant) >= 5:
@@ -92,10 +116,9 @@ def analyze_spectrum(audio: np.ndarray, sr: int = 44100) -> SpectralFeatures:
         dominant = [220.0, 440.0]
 
     # 7. Low / Mid / High Energy Ratios
-    # Low: 20-250 Hz, Mid: 250-4000 Hz, High: 4000-20000 Hz
-    low_mask = (freqs >= 20) & (freqs < 250)
-    mid_mask = (freqs >= 250) & (freqs < 4000)
-    high_mask = (freqs >= 4000) & (freqs < 20000)
+    low_mask = (g_freqs >= 20) & (g_freqs < 250)
+    mid_mask = (g_freqs >= 250) & (g_freqs < 4000)
+    high_mask = (g_freqs >= 4000) & (g_freqs < 20000)
 
     low_pwr = np.sum(fft_vals[low_mask] ** 2) if np.any(low_mask) else 1e-6
     mid_pwr = np.sum(fft_vals[mid_mask] ** 2) if np.any(mid_mask) else 1e-6
@@ -114,7 +137,7 @@ def analyze_spectrum(audio: np.ndarray, sr: int = 44100) -> SpectralFeatures:
         spectral_bandwidth=round(mean_bandwidth, 2),
         spectral_rolloff=round(mean_rolloff, 2),
         spectral_flatness=round(mean_flatness, 4),
-        spectral_contrast=[round(c, 2) for c in mean_contrast],
+        spectral_contrast=contrast_vals,
         dominant_frequencies=dominant,
         low_energy_ratio=round(low_ratio, 3),
         mid_energy_ratio=round(mid_ratio, 3),

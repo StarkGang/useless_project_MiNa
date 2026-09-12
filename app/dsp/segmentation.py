@@ -10,8 +10,9 @@ Classifies slices into acoustic roles:
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-import librosa
 import numpy as np
+
+from .rhythm import analyze_rhythm
 
 
 @dataclass
@@ -89,15 +90,17 @@ def _analyze_slice(chunk: np.ndarray, sr: int = 44100) -> Tuple[float, float, fl
         cent = 1000.0
         flat = 0.5
 
-    # Autocorrelation pitch confidence
+    # FFT-based normalized autocorrelation pitch confidence — O(N log N) not O(N²)
+    # Called ~34x per job so this fix is critical for slow containers
     pitch_conf = 0.0
     dom_freq = 0.0
     if len(chunk) >= 512:
         try:
-            # Normalized autocorrelation in musical pitch range (50Hz - 1200Hz)
-            corr = np.correlate(chunk[:min(len(chunk), 4096)], chunk[:min(len(chunk), 4096)], mode='full')
-            mid = len(corr) // 2
-            corr = corr[mid:]
+            ac_chunk = chunk[:min(len(chunk), 4096)]
+            n = len(ac_chunk)
+            n_fft2 = 2 ** int(np.ceil(np.log2(2 * n - 1)))
+            fx = np.fft.rfft(ac_chunk, n=n_fft2)
+            corr = np.fft.irfft(fx * np.conj(fx))[:n]
             if corr[0] > 1e-8:
                 corr_norm = corr / corr[0]
                 min_lag = int(sr / 1200.0)
@@ -137,12 +140,11 @@ def build_source_palette(
             source_duration=0.0, total_slices_extracted=1
         )
 
-    # 1. Onset Detection across the entire recording
+    # 1. Onset Detection across the entire recording (via pure NumPy spectral flux)
     if onset_samples is None or len(onset_samples) == 0:
         try:
-            onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
-            detected_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sr, backtrack=True)
-            onset_samples = librosa.frames_to_samples(detected_frames)
+            rhythm_info = analyze_rhythm(audio, sr=sr)
+            onset_samples = np.array(rhythm_info.onset_samples, dtype=int)
         except Exception:
             onset_samples = np.array([], dtype=int)
 
@@ -152,7 +154,7 @@ def build_source_palette(
     # We select up to 24 diverse onsets across the timeline
     if len(onset_samples) > 0:
         # Sample evenly across the onsets
-        num_micro = min(len(onset_samples), 24)
+        num_micro = min(len(onset_samples), 12)
         indices = np.linspace(0, len(onset_samples) - 1, num_micro, dtype=int)
         for idx in indices:
             ons = onset_samples[idx]

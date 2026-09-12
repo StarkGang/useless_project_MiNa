@@ -63,13 +63,16 @@ def sine_wave(freq: float, duration: float, phase: float = 0.0, sr: int = 44100)
 
 
 def saw_wave(freq: float, duration: float, sr: int = 44100) -> np.ndarray:
-    """Generate anti-aliased saw wave using band-limited additive synthesis (12 harmonics)."""
+    """Generate anti-aliased saw wave using band-limited additive synthesis (vectorized)."""
     num_samples = int(duration * sr)
     t = np.linspace(0, duration, num_samples, endpoint=False)
-    out = np.zeros(num_samples, dtype=np.float32)
     max_h = min(20, int((sr * 0.45) / max(1.0, freq)))
-    for h in range(1, max_h + 1):
-        out += (1.0 / h) * np.sin(2.0 * np.pi * freq * h * t)
+    if max_h < 1:
+        return np.zeros(num_samples, dtype=np.float32)
+    # Vectorized: stack all harmonics into a (max_h, num_samples) matrix and sum
+    h = np.arange(1, max_h + 1, dtype=np.float32)  # shape (max_h,)
+    phases = 2.0 * np.pi * freq * np.outer(h, t)    # shape (max_h, num_samples)
+    out = np.sum(np.sin(phases) / h[:, np.newaxis], axis=0)
     pk = np.max(np.abs(out))
     if pk > 0:
         out = (out / pk) * 0.95
@@ -77,13 +80,16 @@ def saw_wave(freq: float, duration: float, sr: int = 44100) -> np.ndarray:
 
 
 def square_wave(freq: float, duration: float, sr: int = 44100) -> np.ndarray:
-    """Generate band-limited square wave using odd harmonics."""
+    """Generate band-limited square wave using odd harmonics (vectorized)."""
     num_samples = int(duration * sr)
     t = np.linspace(0, duration, num_samples, endpoint=False)
-    out = np.zeros(num_samples, dtype=np.float32)
     max_h = min(15, int((sr * 0.45) / max(1.0, freq)))
-    for h in range(1, max_h + 1, 2):
-        out += (1.0 / h) * np.sin(2.0 * np.pi * freq * h * t)
+    if max_h < 1:
+        return np.zeros(num_samples, dtype=np.float32)
+    # Vectorized odd harmonics
+    h = np.arange(1, max_h + 1, 2, dtype=np.float32)  # 1, 3, 5 ...
+    phases = 2.0 * np.pi * freq * np.outer(h, t)
+    out = np.sum(np.sin(phases) / h[:, np.newaxis], axis=0)
     pk = np.max(np.abs(out))
     if pk > 0:
         out = (out / pk) * 0.95
@@ -91,15 +97,17 @@ def square_wave(freq: float, duration: float, sr: int = 44100) -> np.ndarray:
 
 
 def triangle_wave(freq: float, duration: float, sr: int = 44100) -> np.ndarray:
-    """Generate band-limited triangle wave."""
+    """Generate band-limited triangle wave (vectorized)."""
     num_samples = int(duration * sr)
     t = np.linspace(0, duration, num_samples, endpoint=False)
-    out = np.zeros(num_samples, dtype=np.float32)
     max_h = min(15, int((sr * 0.45) / max(1.0, freq)))
-    sign = 1.0
-    for h in range(1, max_h + 1, 2):
-        out += sign * (1.0 / (h ** 2)) * np.sin(2.0 * np.pi * freq * h * t)
-        sign *= -1.0
+    if max_h < 1:
+        return np.zeros(num_samples, dtype=np.float32)
+    # Vectorized odd harmonics with alternating sign
+    h = np.arange(1, max_h + 1, 2, dtype=np.float32)  # 1, 3, 5 ...
+    signs = ((-1.0) ** np.arange(len(h))).astype(np.float32)  # +1, -1, +1 ...
+    phases = 2.0 * np.pi * freq * np.outer(h, t)
+    out = np.sum(signs[:, np.newaxis] * np.sin(phases) / (h ** 2)[:, np.newaxis], axis=0)
     pk = np.max(np.abs(out))
     if pk > 0:
         out = (out / pk) * 0.95
@@ -363,24 +371,40 @@ def render_noise_instrument_note(
     b, a = signal.butter(2, [f_low / (sr * 0.5), f_high / (sr * 0.5)], btype='bandpass')
     resonated_f0 = signal.lfilter(b, a, noise_chunk)
 
-    # 3. Resonate at 2nd harmonic (octave) for acoustic warmth
+    # 3. Resonate at 2nd & 3rd harmonics for acoustic warmth & presence
     f2 = min(sr * 0.45, freq * 2.0)
     bw2 = f2 / 20.0
     b2, a2 = signal.butter(1, [max(20.0, f2 - bw2*0.5) / (sr * 0.5), min(sr*0.48, f2 + bw2*0.5) / (sr * 0.5)], btype='bandpass')
     resonated_f2 = signal.lfilter(b2, a2, noise_chunk)
 
+    f3 = min(sr * 0.45, freq * 3.0)
+    bw3 = f3 / 18.0
+    b3, a3 = signal.butter(1, [max(20.0, f3 - bw3*0.5) / (sr * 0.5), min(sr*0.48, f3 + bw3*0.5) / (sr * 0.5)], btype='bandpass')
+    resonated_f3 = signal.lfilter(b3, a3, noise_chunk)
+
     # Combine resonances (boost energy back)
-    tonal_noise = (resonated_f0 * 18.0 + resonated_f2 * 6.0)
-
-    # 4. Mix in raw noise texture (20%) so the source identity is distinctly heard!
-    textured_note = tonal_noise * 0.80 + noise_chunk * 0.20
-
-    # 5. Soft analog tape saturation
-    textured_note = np.tanh(textured_note * 1.5)
+    if style in ["daft_punk", "kanye"]:
+        # Daft Punk French touch / vocoder style: rich 1st, 2nd, and 3rd harmonics + phaser warmth
+        tonal_noise = (resonated_f0 * 16.0 + resonated_f2 * 9.0 + resonated_f3 * 6.0)
+        # Mix with warm source grain
+        textured_note = tonal_noise * 0.82 + noise_chunk * 0.18
+        # Analog tube overdrive saturation
+        textured_note = np.tanh(textured_note * 1.8)
+    elif style in ["lady_gaga", "pop", "synth_pop"]:
+        # Lady Gaga / RedOne style: bright cutting electro pluck with crisp presence
+        tonal_noise = (resonated_f0 * 18.0 + resonated_f2 * 10.0 + resonated_f3 * 4.0)
+        textured_note = tonal_noise * 0.85 + noise_chunk * 0.15
+        textured_note = np.tanh(textured_note * 1.6)
+    else:
+        tonal_noise = (resonated_f0 * 18.0 + resonated_f2 * 6.0)
+        textured_note = tonal_noise * 0.80 + noise_chunk * 0.20
+        textured_note = np.tanh(textured_note * 1.5)
 
     # 6. Apply musical envelope according to style
-    if style == "pluck":
-        env = adsr_envelope(duration, attack=0.004, decay=min(0.35, duration * 0.7), sustain=0.1, release=0.08, sr=sr)
+    if style in ["daft_punk", "kanye"]:
+        env = adsr_envelope(duration, attack=0.008, decay=min(0.28, duration * 0.6), sustain=0.35, release=0.10, sr=sr)
+    elif style in ["lady_gaga", "pop", "pluck", "synth_pop"]:
+        env = adsr_envelope(duration, attack=0.004, decay=min(0.32, duration * 0.65), sustain=0.20, release=0.08, sr=sr)
     elif style == "chime":
         env = adsr_envelope(duration, attack=0.002, decay=duration * 0.8, sustain=0.05, release=0.15, sr=sr)
     elif style == "string":
@@ -388,10 +412,20 @@ def render_noise_instrument_note(
     else:  # "lead"
         env = adsr_envelope(duration, attack=0.03, decay=0.15, sustain=0.7, release=0.12, sr=sr)
 
-    # Subtle sine undertone (15%) only for body
+    # Subtle sine undertone (15%) for solid fundamental body
     sub_support = 0.15 * np.sin(2.0 * np.pi * freq * np.linspace(0, duration, total_samples, endpoint=False))
 
     rendered = (textured_note * env + sub_support * env) * velocity
+
+    # Micro-attack fade (2ms) and release (4ms) to guarantee zero edge clicks
+    att_len = min(int(0.002 * sr), total_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        rendered[:att_len] *= att
+    rel_len = min(int(0.005 * sr), total_samples // 4)
+    if rel_len > 1:
+        rel = 0.5 + 0.5 * np.cos(np.linspace(0, np.pi, rel_len, dtype=np.float32))
+        rendered[-rel_len:] *= rel
 
     pk = np.max(np.abs(rendered))
     if pk > 0:
@@ -405,7 +439,8 @@ def render_noise_bass_note(
     freq: float,
     duration: float,
     velocity: float = 0.85,
-    sr: int = 44100
+    sr: int = 44100,
+    is_prefiltered: bool = False
 ) -> np.ndarray:
     """
     Hybrid Source Bass:
@@ -431,11 +466,14 @@ def render_noise_bass_note(
     else:
         noise_chunk = source_audio[:total_samples].copy()
 
-    b_lp, a_lp = signal.butter(2, min(0.45, 320.0 / (sr * 0.5)), btype='low')
-    source_low = signal.lfilter(b_lp, a_lp, noise_chunk)
-    p_src = np.max(np.abs(source_low))
-    if p_src > 1e-4:
-        source_low = (source_low / p_src)
+    if is_prefiltered:
+        source_low = noise_chunk
+    else:
+        b_lp, a_lp = signal.butter(2, min(0.45, 320.0 / (sr * 0.5)), btype='low')
+        source_low = signal.lfilter(b_lp, a_lp, noise_chunk)
+        p_src = np.max(np.abs(source_low))
+        if p_src > 1e-4:
+            source_low = (source_low / p_src)
 
     # 3. Fuse sub oscillator with source texture
     combined = sub * 0.65 + source_low * 0.45
@@ -486,6 +524,16 @@ def render_noise_kick(slice_audio: np.ndarray, velocity: float = 0.9, sr: int = 
     kick = source_click * 0.40 + sub_body * 0.85
     kick = np.tanh(kick * 1.7)
 
+    # Micro-attack fade (2ms) to eliminate onset crackle
+    att_len = min(int(0.002 * sr), n_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        kick[:att_len] *= att
+    rel_len = min(int(0.008 * sr), n_samples // 4)
+    if rel_len > 1:
+        rel = 0.5 + 0.5 * np.cos(np.linspace(0, np.pi, rel_len, dtype=np.float32))
+        kick[-rel_len:] *= rel
+
     pk = np.max(np.abs(kick))
     if pk > 0:
         kick = (kick / pk) * velocity * 0.95
@@ -523,6 +571,16 @@ def render_noise_snare(slice_audio: np.ndarray, velocity: float = 0.8, sr: int =
     snare = source_crack * 0.65 + body_tone * 0.40
     snare = np.tanh(snare * 2.0)
 
+    # Micro-attack fade (2ms) & release
+    att_len = min(int(0.002 * sr), n_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        snare[:att_len] *= att
+    rel_len = min(int(0.008 * sr), n_samples // 4)
+    if rel_len > 1:
+        rel = 0.5 + 0.5 * np.cos(np.linspace(0, np.pi, rel_len, dtype=np.float32))
+        snare[-rel_len:] *= rel
+
     pk = np.max(np.abs(snare))
     if pk > 0:
         snare = (snare / pk) * velocity * 0.88
@@ -552,7 +610,207 @@ def render_noise_hihat(slice_audio: np.ndarray, velocity: float = 0.6, sr: int =
     env = np.exp(-t * 55.0)
     hihat = hihat_filtered * env
 
+    # Micro-attack & release
+    att_len = min(int(0.0015 * sr), n_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        hihat[:att_len] *= att
+    rel_len = min(int(0.004 * sr), n_samples // 4)
+    if rel_len > 1:
+        rel = 0.5 + 0.5 * np.cos(np.linspace(0, np.pi, rel_len, dtype=np.float32))
+        hihat[-rel_len:] *= rel
+
     pk = np.max(np.abs(hihat))
     if pk > 0:
         hihat = (hihat / pk) * velocity * 0.78
     return hihat.astype(np.float32)
+
+
+def render_noise_open_hihat(slice_audio: np.ndarray, velocity: float = 0.65, sr: int = 44100) -> np.ndarray:
+    """
+    Open Sizzle Hi-Hat:
+    Takes high-frequency transient texture from source audio and sustains it
+    with a ringing 220ms sizzle decay for authentic groove syncopation.
+    """
+    dur = 0.24
+    n_samples = int(dur * sr)
+    t = np.linspace(0, dur, n_samples, endpoint=False)
+
+    if len(slice_audio) < n_samples:
+        reps = int(np.ceil(n_samples / max(1, len(slice_audio))))
+        slice_audio = np.tile(slice_audio, reps)[:n_samples]
+    else:
+        slice_audio = slice_audio[:n_samples].copy()
+
+    b_hp, a_hp = signal.butter(2, min(0.45, 4200.0 / (sr * 0.5)), btype='high')
+    filtered = signal.lfilter(b_hp, a_hp, slice_audio)
+
+    # Longer, shimmering decay envelope
+    env = np.exp(-t * 14.0)
+    out = filtered * env
+
+    att_len = min(int(0.002 * sr), n_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        out[:att_len] *= att
+    rel_len = min(int(0.006 * sr), n_samples // 4)
+    if rel_len > 1:
+        rel = 0.5 + 0.5 * np.cos(np.linspace(0, np.pi, rel_len, dtype=np.float32))
+        out[-rel_len:] *= rel
+
+    pk = np.max(np.abs(out))
+    if pk > 0:
+        out = (out / pk) * velocity * 0.76
+    return out.astype(np.float32)
+
+
+def render_karplus_strong_noise_note(
+    source_grain: np.ndarray,
+    freq: float,
+    duration: float,
+    velocity: float = 0.85,
+    damping: float = 0.985,
+    brightness: float = 0.55,
+    sr: int = 44100
+) -> np.ndarray:
+    """
+    Karplus-Strong Physical String Synthesis Excited by Source Noise:
+    Excites an acoustic delay-line resonator using an actual micro-grain from the user's
+    sound recording. The resulting instrument note possesses the authentic timber,
+    grit, and physical attack transient of the user's sound while vibrating at a pure musical pitch.
+    Vectorized via scipy.signal.lfilter in C (< 1ms execution).
+    """
+    total_samples = max(64, int(duration * sr))
+    freq = float(np.clip(freq, 45.0, sr * 0.45))
+    L = max(4, int(round(sr / freq)))
+
+    excitation = np.zeros(total_samples, dtype=np.float32)
+    if len(source_grain) == 0:
+        source_grain = np.random.normal(0, 0.2, L).astype(np.float32)
+
+    grain_len = min(L, len(source_grain))
+    win = np.hanning(grain_len).astype(np.float32)
+    excitation[:grain_len] = source_grain[:grain_len] * win
+
+    # Karplus-Strong feedback IIR transfer function
+    b = np.array([1.0], dtype=np.float32)
+    a = np.zeros(L + 2, dtype=np.float32)
+    a[0] = 1.0
+    a[L] = -damping * (1.0 - brightness)
+    a[L + 1] = -damping * brightness
+
+    string_note = signal.lfilter(b, a, excitation)
+
+    # Analog tape saturation for warm presence
+    saturated = np.tanh(string_note * 1.6)
+
+    # Micro-attack fade (2ms) & smooth tail release to eliminate abrupt cutoffs
+    att_len = min(int(0.002 * sr), total_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        saturated[:att_len] *= att
+    rel_len = min(int(0.04 * sr), total_samples // 4)
+    if rel_len > 1:
+        fade_out = np.linspace(1.0, 0.0, rel_len, dtype=np.float32)
+        saturated[-rel_len:] *= fade_out
+
+    pk = np.max(np.abs(saturated))
+    if pk > 0:
+        saturated = (saturated / pk) * velocity * 0.88
+
+    return saturated.astype(np.float32)
+
+
+def render_noise_riser(source_audio: np.ndarray, duration: float = 3.0, sr: int = 44100) -> np.ndarray:
+    """
+    Source Noise Transition Riser:
+    Takes atmospheric texture from the user's noise and applies a continuous
+    multi-band upward frequency sweep (200Hz -> 9000Hz) with crescendo swell.
+    Completely zero clicks or boundary resets.
+    """
+    n_samples = max(64, int(duration * sr))
+    t = np.linspace(0, duration, n_samples, endpoint=False)
+
+    if len(source_audio) < n_samples:
+        reps = int(np.ceil(n_samples / max(1, len(source_audio))))
+        noise_chunk = np.tile(source_audio, reps)[:n_samples].astype(np.float32)
+    else:
+        noise_chunk = source_audio[:n_samples].astype(np.float32).copy()
+
+    # Smooth multi-band continuous frequency sweep:
+    # 7 overlapping octave bandpass filters filtered causally over the FULL buffer
+    # with smooth Gaussian time-gating that ascends across the duration
+    num_bands = 7
+    centers = np.geomspace(220.0, min(sr * 0.45, 8800.0), num=num_bands)
+    riser_sum = np.zeros(n_samples, dtype=np.float32)
+
+    for idx, fc in enumerate(centers):
+        bw = fc * 0.55
+        f_low = max(20.0, fc - bw * 0.5)
+        f_high = min(sr * 0.48, fc + bw * 0.5)
+        b, a = signal.butter(1, [f_low / (sr * 0.5), f_high / (sr * 0.5)], btype='bandpass')
+        band_filtered = signal.lfilter(b, a, noise_chunk)
+
+        # Time envelope for this band centered at peak_t
+        peak_t = (idx / (num_bands - 1)) * duration
+        sigma_t = duration / (num_bands * 0.75)
+        time_env = np.exp(-0.5 * ((t - peak_t) / sigma_t) ** 2).astype(np.float32)
+        riser_sum += band_filtered * time_env
+
+    # Smooth crescendo exponential swell curve
+    crescendo = (np.exp(t * 1.8) - 1.0) / (np.exp(duration * 1.8) - 1.0)
+    riser = riser_sum * (0.08 + 0.92 * crescendo)
+
+    # Smooth 4ms attack & 4ms release
+    att_len = min(int(0.004 * sr), n_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        riser[:att_len] *= att
+    rel_len = min(int(0.006 * sr), n_samples // 4)
+    if rel_len > 1:
+        rel = 0.5 + 0.5 * np.cos(np.linspace(0, np.pi, rel_len, dtype=np.float32))
+        riser[-rel_len:] *= rel
+
+    pk = np.max(np.abs(riser))
+    if pk > 0:
+        riser = (riser / pk) * 0.85
+
+    return riser.astype(np.float32)
+
+
+def render_noise_downlifter(slice_audio: np.ndarray, duration: float = 1.8, sr: int = 44100) -> np.ndarray:
+    """
+    Source Noise Downlifter / Impact Crash:
+    Takes an impact transient from the user's sound and dissolves it into a decaying
+    lowpass reverberant wash for resolving drop sections.
+    """
+    n_samples = max(64, int(duration * sr))
+    t = np.linspace(0, duration, n_samples, endpoint=False)
+
+    if len(slice_audio) < n_samples:
+        slice_audio = np.pad(slice_audio, (0, n_samples - len(slice_audio))).astype(np.float32)
+    else:
+        slice_audio = slice_audio[:n_samples].astype(np.float32).copy()
+
+    # Downward filter cutoff: 1400Hz lowpass
+    b_lp, a_lp = signal.butter(2, min(0.45, 1400.0 / (sr * 0.5)), btype='low')
+    washed = signal.lfilter(b_lp, a_lp, slice_audio)
+
+    env = np.exp(-t * 2.8).astype(np.float32)
+    downlifter = (slice_audio * 0.35 + washed * 0.65) * env
+
+    # Smooth 3ms attack fade to eliminate non-zero onset crackle
+    att_len = min(int(0.003 * sr), n_samples // 4)
+    if att_len > 1:
+        att = 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, att_len, dtype=np.float32))
+        downlifter[:att_len] *= att
+    rel_len = min(int(0.008 * sr), n_samples // 4)
+    if rel_len > 1:
+        rel = 0.5 + 0.5 * np.cos(np.linspace(0, np.pi, rel_len, dtype=np.float32))
+        downlifter[-rel_len:] *= rel
+
+    pk = np.max(np.abs(downlifter))
+    if pk > 0:
+        downlifter = (downlifter / pk) * 0.78
+
+    return downlifter.astype(np.float32)

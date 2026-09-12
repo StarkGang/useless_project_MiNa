@@ -5,8 +5,7 @@ Performs 100% rule-based classification into 9 sonic categories without any AI.
 """
 
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Tuple
-import librosa
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from .pitch import PitchFeatures, analyze_pitch
@@ -200,15 +199,33 @@ def classify_source(
     return "MIXED", 0.70, reasons
 
 
-def analyze_audio(audio: np.ndarray, sr: int = 44100) -> CompleteAnalysis:
-    """Run full DSP feature extraction suite and rule-based classifier."""
+def analyze_audio(
+    audio: np.ndarray,
+    sr: int = 44100,
+    on_progress: Optional[Callable[[int, str], None]] = None
+) -> CompleteAnalysis:
+    """Run full DSP feature extraction suite and rule-based classifier with continuous progress reporting."""
+    if on_progress:
+        on_progress(22, "Decoding acoustic waveform & dynamic range...")
     amp = compute_amplitude_features(audio, sr=sr)
-    spec = analyze_spectrum(audio, sr=sr)
-    rhythm = analyze_rhythm(audio, sr=sr)
-    pitch = analyze_pitch(audio, sr=sr)
-    texture = compute_texture_features(audio, spec, rhythm, sr=sr)
 
+    if on_progress:
+        on_progress(28, "Extracting spectral centroid & frequency rolloff...")
+    spec = analyze_spectrum(audio, sr=sr)
+
+    if on_progress:
+        on_progress(38, "Detecting rhythmic pulses & transient intervals...")
+    rhythm = analyze_rhythm(audio, sr=sr)
+
+    if on_progress:
+        on_progress(45, "Estimating fundamental pitch & harmonic chroma...")
+    pitch = analyze_pitch(audio, sr=sr)
+
+    texture = compute_texture_features(audio, spec, rhythm, sr=sr)
     category, confidence, reasons = classify_source(amp, spec, rhythm, pitch, texture)
+
+    if on_progress:
+        on_progress(50, f"Acoustic DNA classification complete ({category})!")
 
     return CompleteAnalysis(
         classification=category,

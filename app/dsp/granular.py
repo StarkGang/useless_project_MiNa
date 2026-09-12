@@ -55,18 +55,31 @@ def create_granular_pad(
     audio: np.ndarray,
     target_duration: float,
     semitone_shift: float = 0.0,
-    grain_duration: float = 0.18,
-    density: float = 18.0,
+    grain_duration: float = 0.16,
+    density: float = 12.0,
     sr: int = 44100,
     stereo_spread: bool = True
 ) -> np.ndarray:
     """
     Transforms source recording into a lush, sustained musical pad/drone
-    via asynchronous granular cloud synthesis.
+    via asynchronous granular cloud synthesis. Highly optimized for low-end devices.
     Returns stereo array shape (2, N).
     """
+    import os
+    # On Render/serverless containers, halve density to reduce loop iterations
+    # from 360 → 180 while still producing a full, lush pad
+    _is_low_perf = bool(
+        os.environ.get("RENDER")
+        or os.environ.get("USE_TMP_STORAGE")
+        or os.environ.get("LOW_PERF")
+    )
+    if _is_low_perf:
+        density = max(4.0, density * 0.5)
+
     total_samples = int(target_duration * sr)
     grain_size = max(64, int(grain_duration * sr))
+    # Pre-bake the Hann window ONCE outside the loop (was wastefully rebuilt per grain)
+    hann_win = np.hanning(grain_size).astype(np.float32)
 
     left_out = np.zeros(total_samples, dtype=np.float32)
     right_out = np.zeros(total_samples, dtype=np.float32)
@@ -82,20 +95,28 @@ def create_granular_pad(
     for pos in time_points:
         int_pos = int(pos)
         src_start = rng.integers(0, max(1, len(audio) - grain_size))
-        grain = extract_grain(audio, src_start, grain_size, window_type="hann")
 
-        micro_detune = semitone_shift + float(rng.uniform(-0.12, 0.12))
-        shifted = pitch_shift_grain(grain, micro_detune)
+        end_sample = min(len(audio), src_start + grain_size)
+        raw_grain = audio[src_start:end_sample]
+        if len(raw_grain) < grain_size:
+            raw_grain = np.pad(raw_grain, (0, grain_size - len(raw_grain)))
+        grain = (raw_grain * hann_win).astype(np.float32)
+
+        micro_detune = semitone_shift + float(rng.uniform(-0.10, 0.10))
+        if micro_detune != 0.0:
+            shifted = pitch_shift_grain(grain, micro_detune)
+        else:
+            shifted = grain
 
         if stereo_spread:
-            pan = float(rng.uniform(0.15, 0.85))
+            pan = float(rng.uniform(0.2, 0.8))
             left_gain = float(np.cos(pan * np.pi * 0.5))
             right_gain = float(np.sin(pan * np.pi * 0.5))
         else:
             left_gain = 0.707
             right_gain = 0.707
 
-        end_pos = min(total_samples, int_pos + grain_size)
+        end_pos = min(total_samples, int_pos + len(shifted))
         g_len = end_pos - int_pos
         left_out[int_pos:end_pos] += shifted[:g_len] * left_gain
         right_out[int_pos:end_pos] += shifted[:g_len] * right_gain
@@ -105,8 +126,8 @@ def create_granular_pad(
     left_out = (left_out / max_pk) * 0.75
     right_out = (right_out / max_pk) * 0.75
 
-    # Gentle fade in and out (1.2s)
-    fade_len = min(int(1.2 * sr), total_samples // 4)
+    # Gentle fade in and out (0.8s)
+    fade_len = min(int(0.8 * sr), total_samples // 4)
     fade_in = np.linspace(0.0, 1.0, fade_len, dtype=np.float32)
     fade_out = np.linspace(1.0, 0.0, fade_len, dtype=np.float32)
 
@@ -116,6 +137,7 @@ def create_granular_pad(
     right_out[-fade_len:] *= fade_out
 
     return np.stack([left_out, right_out], axis=0)
+
 
 
 def create_source_texture(

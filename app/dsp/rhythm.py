@@ -6,7 +6,6 @@ tempo estimation, and extracts transient slices for percussion.
 
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
-import librosa
 import numpy as np
 
 
@@ -24,7 +23,7 @@ class RhythmFeatures:
 
 
 def analyze_rhythm(audio: np.ndarray, sr: int = 44100) -> RhythmFeatures:
-    """Analyze onset envelope, beat track, periodicity, and transient dynamics."""
+    """Analyze onset envelope, beat track, periodicity, and transient dynamics using pure vectorized DSP."""
     duration = len(audio) / sr
     if duration < 0.2:
         return RhythmFeatures(
@@ -39,22 +38,47 @@ def analyze_rhythm(audio: np.ndarray, sr: int = 44100) -> RhythmFeatures:
             onset_samples=[]
         )
 
-    # 1. Onset strength envelope (limit to 12s to prevent excessive STFT memory on 512MB RAM hosts)
+    # 1. Spectral flux onset envelope (pure NumPy, zero Numba JIT compiling)
     hop_length = 512
-    analysis_audio = audio[:min(len(audio), sr * 12)]
-    onset_env = librosa.onset.onset_strength(y=analysis_audio, sr=sr, hop_length=hop_length)
+    n_fft = 1024
+    analysis_audio = audio[:min(len(audio), sr * 8)]
+    if len(analysis_audio) < n_fft:
+        analysis_audio = np.pad(analysis_audio, (0, n_fft - len(analysis_audio)))
 
-    # 2. Onset peak detection
-    onset_frames = librosa.onset.onset_detect(
-        onset_envelope=onset_env,
-        sr=sr,
-        hop_length=hop_length,
-        backtrack=True,
-        delta=0.07
+    n_frames = max(1, (len(analysis_audio) - n_fft) // hop_length + 1)
+    frames = np.lib.stride_tricks.as_strided(
+        analysis_audio,
+        shape=(n_frames, n_fft),
+        strides=(analysis_audio.strides[0] * hop_length, analysis_audio.strides[0])
     )
-    onset_times = [float(t) for t in librosa.frames_to_time(onset_frames, sr=sr, hop_length=hop_length)]
-    onset_samples = [int(s) for s in librosa.frames_to_samples(onset_frames, hop_length=hop_length)]
+    win = np.hanning(n_fft).astype(np.float32)
+    spec = np.abs(np.fft.rfft(frames * win, axis=-1))
 
+    # Half-wave rectified spectral novelty with high-frequency emphasis
+    diff = np.diff(spec, axis=0)
+    weights = np.linspace(0.8, 2.8, spec.shape[-1], dtype=np.float32)
+    flux = np.sum(np.maximum(0.0, diff) * weights, axis=-1)
+
+    max_flux = float(np.max(flux)) if len(flux) > 0 else 0.0
+    if max_flux > 1e-6:
+        onset_env = (flux / max_flux).astype(np.float32)
+    else:
+        onset_env = np.zeros(len(flux), dtype=np.float32)
+
+    # 2. Onset peak detection with adaptive thresholding & 50ms refractory period
+    onset_times: List[float] = []
+    onset_samples: List[int] = []
+    threshold = 0.12
+    min_dist = max(1, int(0.05 * sr / hop_length))  # 50ms min distance
+
+    peaks: List[int] = []
+    for i in range(1, len(onset_env) - 1):
+        if onset_env[i] > threshold and onset_env[i] > onset_env[i - 1] and onset_env[i] >= onset_env[i + 1]:
+            if not peaks or (i - peaks[-1]) >= min_dist:
+                peaks.append(i)
+
+    onset_times = [round(float(p * hop_length / sr), 3) for p in peaks]
+    onset_samples = [int(p * hop_length) for p in peaks]
     onset_count = len(onset_times)
     rhythmic_density = float(onset_count / max(0.5, duration))
 
@@ -63,57 +87,52 @@ def analyze_rhythm(audio: np.ndarray, sr: int = 44100) -> RhythmFeatures:
         iois = np.diff(onset_times)
         mean_ioi = float(np.mean(iois))
         std_ioi = float(np.std(iois))
-        # Coefficient of variation (lower = more regular)
         cov = std_ioi / max(mean_ioi, 1e-4)
-        # Invert cov to regularity score [0.0, 1.0]
         ioi_regularity = float(np.clip(1.0 - min(1.0, cov), 0.0, 1.0))
     else:
         mean_ioi = 0.0
         ioi_regularity = 0.0
 
-    # 4. Tempo estimation via beat tracking and autocorrelation
+    # 4. Tempo estimation via FFT-based autocorrelation of the onset envelope
     tempo_confidence = 0.0
     has_reliable_rhythm = False
     estimated_tempo = 95.0
 
-    try:
-        tempo_fn = getattr(librosa.feature, "tempo", getattr(librosa.beat, "tempo", None))
-        if tempo_fn is not None:
-            tempo_result = tempo_fn(
-                onset_envelope=onset_env,
-                sr=sr,
-                hop_length=hop_length,
-                aggregate=None
-            )
-        else:
-            tempo_result = None
-        if tempo_result is not None and len(tempo_result) > 0:
-            bpm = float(np.median(tempo_result))
-            # Keep BPM in musical range [60, 140], halving or doubling if necessary
-            while bpm > 140.0:
-                bpm /= 2.0
-            while bpm < 65.0:
-                bpm *= 2.0
+    if len(onset_env) > 16:
+        try:
+            n_env = len(onset_env)
+            n_fft_ac = 2 ** int(np.ceil(np.log2(2 * n_env - 1)))
+            fx = np.fft.rfft(onset_env.astype(np.float64), n=n_fft_ac)
+            ac = np.fft.irfft(fx * np.conj(fx))[:n_env]
 
-            # Confidence based on onset strength variance and autocorrelation peak
-            ac = librosa.autocorrelate(onset_env, max_size=int(sr / hop_length * 4))
-            if len(ac) > 1:
-                ac_norm = ac[1:] / (ac[0] + 1e-8)
-                peak_ac = float(np.max(ac_norm)) if len(ac_norm) > 0 else 0.0
-            else:
-                peak_ac = 0.0
+            fps = sr / hop_length
+            # Lag bounds corresponding to 60 BPM to 180 BPM
+            min_lag = max(1, int(fps * 60.0 / 180.0))
+            max_lag = min(len(ac) - 1, int(fps * 60.0 / 60.0))
 
-            tempo_confidence = float(np.clip((peak_ac * 0.6) + (ioi_regularity * 0.4), 0.0, 1.0))
-            if tempo_confidence > 0.45 and rhythmic_density > 0.8:
-                has_reliable_rhythm = True
-                estimated_tempo = round(bpm, 1)
-            else:
-                # Default to a nice musical tempo when rhythm is ambiguous
-                estimated_tempo = round(bpm, 1) if 70 <= bpm <= 130 else 95.0
-    except Exception:
-        estimated_tempo = 95.0
-        tempo_confidence = 0.1
-        has_reliable_rhythm = False
+            if max_lag > min_lag:
+                ac_zone = ac[min_lag:max_lag]
+                if len(ac_zone) > 0 and ac[0] > 1e-6:
+                    norm_zone = ac_zone / ac[0]
+                    best_rel = int(np.argmax(norm_zone))
+                    best_lag = min_lag + best_rel
+                    peak_ac = float(norm_zone[best_rel])
+
+                    raw_bpm = (fps * 60.0) / best_lag
+                    bpm = raw_bpm
+                    while bpm > 140.0:
+                        bpm /= 2.0
+                    while bpm < 65.0:
+                        bpm *= 2.0
+
+                    tempo_confidence = float(np.clip((peak_ac * 0.6) + (ioi_regularity * 0.4), 0.0, 1.0))
+                    if tempo_confidence > 0.35 and rhythmic_density > 0.6:
+                        has_reliable_rhythm = True
+                        estimated_tempo = round(bpm, 1)
+                    else:
+                        estimated_tempo = round(bpm, 1) if 70 <= bpm <= 130 else 95.0
+        except Exception:
+            estimated_tempo = 95.0
 
     return RhythmFeatures(
         estimated_tempo=float(estimated_tempo),
