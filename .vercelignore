@@ -1,0 +1,11 @@
+outputs/
+uploads/
+app/
+Dockerfile
+render.yaml
+requirements.txt
+test_*.py
+images/
+.git/
+.github/
+.dockerignore

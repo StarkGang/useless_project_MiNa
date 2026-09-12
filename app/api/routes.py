@@ -25,6 +25,12 @@ from .jobs import OUTPUT_DIR, UPLOAD_DIR, job_manager, submit_generation_job
 router = APIRouter(prefix="/api")
 
 
+@router.get("/health")
+def api_health():
+    """Ultra-fast JSON health check endpoint for uptime pingers & monitors."""
+    return {"status": "ok", "service": "TheUnnecessaryFM"}
+
+
 @router.post("/analyze")
 async def analyze_uploaded_audio(file: UploadFile = File(...)):
     """
@@ -86,7 +92,8 @@ async def generate_music(
     existing_job_id: Optional[str] = Form(None),
     beat_preference: str = Form("minimal"),
     energy_preference: str = Form("balanced"),
-    seed: Optional[str] = Form(None)
+    seed: Optional[str] = Form(None),
+    num_candidates: Optional[int] = Form(None)
 ):
     """
     Submits a procedural music generation request.
@@ -122,7 +129,8 @@ async def generate_music(
         input_file_path=str(target_path),
         beat_preference=beat_preference,
         energy_preference=energy_preference,
-        custom_seed=custom_seed_val
+        custom_seed=custom_seed_val,
+        num_candidates=num_candidates
     )
 
     return {

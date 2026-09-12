@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: theunnecessaryfm
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: NUM_CANDIDATES
+        value: "2"

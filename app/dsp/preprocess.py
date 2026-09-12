@@ -85,19 +85,30 @@ def preprocess_audio(path: str, target_sr: int = TARGET_SR) -> PreprocessedAudio
     if not path_obj.exists():
         raise FileNotFoundError(f"Source file not found: {path}")
 
-    # Use a temporary wav file for FFmpeg transcoding
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        temp_wav_path = tmp.name
-
+    # Fast path: Try direct reading via soundfile if already a clean WAV at target_sr
+    data = None
     try:
-        decode_to_wav(str(path_obj), temp_wav_path, target_sr=target_sr)
-        data, sr = sf.read(temp_wav_path, dtype="float32", always_2d=True)
-    finally:
-        if os.path.exists(temp_wav_path):
-            try:
-                os.remove(temp_wav_path)
-            except OSError:
-                pass
+        raw_data, file_sr = sf.read(str(path_obj), dtype="float32", always_2d=True)
+        if file_sr == target_sr and raw_data.shape[0] > 0:
+            data = raw_data
+            sr = file_sr
+    except Exception:
+        data = None
+
+    if data is None:
+        # Fallback to FFmpeg transcoding for non-WAV formats (MP3, OGG, WebM) or different sample rates
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            temp_wav_path = tmp.name
+
+        try:
+            decode_to_wav(str(path_obj), temp_wav_path, target_sr=target_sr)
+            data, sr = sf.read(temp_wav_path, dtype="float32", always_2d=True)
+        finally:
+            if os.path.exists(temp_wav_path):
+                try:
+                    os.remove(temp_wav_path)
+                except OSError:
+                    pass
 
     num_samples, orig_channels = data.shape
 

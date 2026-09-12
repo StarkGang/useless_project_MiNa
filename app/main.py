@@ -31,6 +31,12 @@ app.add_middleware(
 # Include API Router
 app.include_router(api_router)
 
+@app.get("/health")
+def health_check():
+    """Fast health check endpoint for monitoring and keep-alive pingers."""
+    return {"status": "ok", "service": "TheUnnecessaryFM"}
+
+
 # Mount Frontend static files
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

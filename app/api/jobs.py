@@ -47,6 +47,7 @@ class JobRecord:
     beat_preference: str = "minimal"
     energy_preference: str = "balanced"
     custom_seed: Optional[int] = None
+    num_candidates: Optional[int] = None
 
 
 class JobManager:
@@ -59,9 +60,12 @@ class JobManager:
         source_filename: str,
         beat_preference: str = "minimal",
         energy_preference: str = "balanced",
-        custom_seed: Optional[int] = None
+        custom_seed: Optional[int] = None,
+        num_candidates: Optional[int] = None
     ) -> JobRecord:
         job_id = uuid.uuid4().hex[:10]
+        eff_cands = num_candidates or int(os.environ.get("NUM_CANDIDATES", "3"))
+        eff_cands = max(1, min(eff_cands, 5))
         job = JobRecord(
             job_id=job_id,
             status="queued",
@@ -71,7 +75,8 @@ class JobManager:
             source_filename=source_filename,
             beat_preference=beat_preference,
             energy_preference=energy_preference,
-            custom_seed=custom_seed
+            custom_seed=custom_seed,
+            num_candidates=eff_cands
         )
         self.jobs[job_id] = job
         return job
@@ -138,15 +143,17 @@ def run_pipeline_sync(job_id: str, input_file_path: str) -> None:
         }
         job_manager.update_job(job_id, analysis=analysis_data, source_duration=prep.duration, progress=50)
 
-        # Step 3: Procedural 3-Candidate Composition
-        job_manager.update_job(job_id, stage="Procedurally synthesizing 3 musical candidates...", progress=65)
+        # Step 3: Procedural Composition (candidates count configurable)
+        cands_count = job.num_candidates or 3
+        stage_text = f"Procedurally synthesizing {cands_count} musical candidate{'s' if cands_count > 1 else ''}..."
+        job_manager.update_job(job_id, stage=stage_text, progress=65)
         winner, all_candidates = generate_candidates(
             prep=prep,
             analysis=analysis,
             base_seed=job.custom_seed,
             beat_preference=job.beat_preference,
             energy_preference=job.energy_preference,
-            num_candidates=3
+            num_candidates=cands_count
         )
 
         job_manager.update_job(job_id, stage="Scoring candidates & mastering winner...", progress=85)
@@ -218,14 +225,16 @@ async def submit_generation_job(
     input_file_path: str,
     beat_preference: str = "minimal",
     energy_preference: str = "balanced",
-    custom_seed: Optional[int] = None
+    custom_seed: Optional[int] = None,
+    num_candidates: Optional[int] = None
 ) -> str:
     """Create job and run in asyncio thread executor."""
     job = job_manager.create_job(
         source_filename=Path(input_file_path).name,
         beat_preference=beat_preference,
         energy_preference=energy_preference,
-        custom_seed=custom_seed
+        custom_seed=custom_seed,
+        num_candidates=num_candidates
     )
 
     loop = asyncio.get_running_loop()
